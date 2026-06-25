@@ -3,86 +3,110 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Sheets Pivot &amp; Charts</title>
+<title>SSE Business Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.13.2/themes/base/jquery-ui.min.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gridstack@10.3.1/dist/gridstack.min.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gridstack@10.3.1/dist/gridstack-extra.min.css" />
 <style>
   :root {
-    --bg:#fff; --fg:#1f2328; --muted:#57606a; --border:#d0d7de; --header-bg:#f6f8fa;
-    --accent:#0969da; --chip:#eaf1fb; --chip-border:#aacbf2; --calc:#fff3d6; --calc-border:#e3c673;
-    --error-bg:#ffebe9; --error-border:#ff818266; --tot:#f0f3f6;
+    --bg:#f3f4f7; --surface:#ffffff; --fg:#1b2030; --muted:#6b7280; --border:#e8eaf0; --header-bg:#f8f9fc;
+    --accent:#003049; --accent-hover:#00202f; --accent-weak:#e6eef3;
+    --chip:#e7eff4; --chip-border:#9fc1d6; --calc:#fdf0d5; --calc-border:#e0c074;
+    --error-bg:#fdecec; --error-border:#f3b0b4; --tot:#eef3f6;
+    --radius:10px; --radius-sm:8px;
+    --shadow:0 1px 2px rgba(16,24,40,.06), 0 1px 3px rgba(16,24,40,.09);
+    --shadow-lg:0 6px 16px rgba(16,24,40,.10), 0 2px 6px rgba(16,24,40,.06);
   }
   * { box-sizing:border-box; }
-  body { margin:0; font:13px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; color:var(--fg); background:var(--bg); }
-  header.app { padding:12px 16px; border-bottom:1px solid var(--border); position:sticky; top:0; background:var(--bg); z-index:50; }
-  h1 { font-size:17px; margin:0 0 2px; }
-  .sub { color:var(--muted); font-size:12px; }
-  .topbar { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:10px; }
-  .topbar input[type=text] { flex:1 1 360px; min-width:220px; padding:5px 8px; border:1px solid var(--border); border-radius:6px; font-family:ui-monospace,Menlo,monospace; font-size:11px; }
-  button { padding:5px 12px; border:1px solid var(--border); border-radius:6px; background:var(--header-bg); cursor:pointer; font-size:12px; }
-  button.primary { background:var(--accent); color:#fff; border-color:var(--accent); }
-  button:disabled { opacity:.6; cursor:default; }
+  body { margin:0; font:15px/1.55 "Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; color:var(--fg); background:var(--bg); -webkit-font-smoothing:antialiased; }
+  header.app { padding:14px 20px; position:sticky; top:0; background:var(--surface); box-shadow:var(--shadow); z-index:50; }
+  h1 { font-size:21px; font-weight:700; letter-spacing:-.01em; margin:0; }
+  .brandwrap { display:flex; align-items:center; gap:12px; }
+  .brandmark { width:34px; height:34px; border-radius:10px; background:linear-gradient(135deg,#003049,#669BBC); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:16px; box-shadow:var(--shadow); flex:0 0 auto; }
+  .sub { color:var(--muted); font-size:14.5px; font-weight:500; margin-top:1px; }
+  .topbar { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:12px; }
+  .topbar input[type=text] { flex:1 1 360px; min-width:220px; padding:7px 10px; border:1px solid var(--border); border-radius:var(--radius-sm); font-family:ui-monospace,Menlo,monospace; font-size:13px; background:var(--surface); box-shadow:var(--shadow); }
+  button { padding:6px 13px; border:1px solid var(--border); border-radius:var(--radius-sm); background:var(--surface); color:var(--fg); cursor:pointer; font-size:14px; font-weight:500; font-family:inherit; box-shadow:var(--shadow); transition:background .12s, box-shadow .12s, transform .04s; }
+  button:hover:not(:disabled) { box-shadow:var(--shadow-lg); }
+  button:active:not(:disabled) { transform:translateY(1px); }
+  button.primary { background:var(--accent); color:#fff; border-color:transparent; }
+  button.primary:hover:not(:disabled) { background:var(--accent-hover); }
+  button:disabled { opacity:.5; cursor:default; box-shadow:none; }
 
-  .layout { display:flex; align-items:flex-start; gap:14px; padding:12px 16px 60px; }
+  .layout { display:flex; align-items:flex-start; gap:16px; padding:16px 20px 60px; }
   .panel { flex:0 0 250px; }
   .main { flex:1 1 auto; min-width:0; }
-  .card { border:1px solid var(--border); border-radius:8px; margin-bottom:12px; }
-  .card h3 { margin:0; padding:7px 10px; font-size:12px; background:var(--header-bg); border-bottom:1px solid var(--border); border-radius:8px 8px 0 0; color:var(--muted); text-transform:uppercase; letter-spacing:.03em; }
-  .card .body { padding:8px 10px; }
+  .card { border:1px solid var(--border); border-radius:var(--radius); margin-bottom:14px; background:var(--surface); box-shadow:var(--shadow); overflow:hidden; }
+  .card h3 { margin:0; padding:9px 12px; font-size:13px; background:transparent; border-bottom:1px solid var(--border); color:var(--muted); text-transform:uppercase; letter-spacing:.05em; font-weight:600; }
+  .card .body { padding:10px 12px; }
 
   /* fields palette */
   .field-row { display:flex; align-items:center; gap:6px; padding:3px 0; }
   .field-row .fname { flex:1 1 auto; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .field-row .adds { display:flex; gap:3px; }
-  .field-row .adds button { padding:1px 6px; font-size:11px; line-height:1.4; }
+  .field-row .adds { display:flex; gap:3px; opacity:0; visibility:hidden; transition:opacity .12s; }
+  .field-row:hover .adds, .field-row:focus-within .adds { opacity:1; visibility:visible; }
+  .field-row .adds button { padding:1px 6px; font-size:13px; line-height:1.4; }
 
   /* buckets */
-  .bucket-list { list-style:none; margin:0; padding:6px; min-height:38px; border:1px dashed var(--border); border-radius:6px; background:#fcfdff; }
-  .bucket-list:empty::after { content:"drag or add fields here"; color:#aab; font-style:italic; font-size:11px; }
-  .chip { display:flex; align-items:center; gap:6px; background:var(--chip); border:1px solid var(--chip-border); border-radius:6px; padding:3px 6px; margin:3px 0; cursor:grab; }
+  .bucket-list { list-style:none; margin:0; padding:7px; min-height:40px; border:1px dashed var(--border); border-radius:var(--radius-sm); background:var(--bg); }
+  .bucket-list:empty::after { content:"drag or add fields here"; color:#aab; font-style:italic; font-size:13px; }
+  .chip { display:flex; align-items:center; gap:6px; background:var(--chip); border:1px solid var(--chip-border); border-radius:var(--radius-sm); padding:4px 8px; margin:4px 0; cursor:grab; box-shadow:var(--shadow); }
   .chip.calc { background:var(--calc); border-color:var(--calc-border); }
   .chip .cname { flex:1 1 auto; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .chip select { font-size:11px; padding:1px 2px; border:1px solid var(--border); border-radius:4px; }
+  .chip select { font-size:13px; padding:1px 2px; border:1px solid var(--border); border-radius:4px; }
   .chip .x { cursor:pointer; color:var(--muted); font-weight:bold; padding:0 2px; }
-  .chip .fbtn { font-size:11px; padding:1px 6px; }
-  .chip .badge { font-size:10px; background:#fff; border:1px solid var(--calc-border); border-radius:8px; padding:0 5px; }
-  .chip .ic { cursor:pointer; color:var(--muted); padding:0 1px; font-size:12px; }
+  .chip .fbtn { font-size:13px; padding:1px 6px; }
+  .chip .badge { font-size:12px; background:#fff; border:1px solid var(--calc-border); border-radius:8px; padding:0 5px; }
+  .chip .ic { cursor:pointer; color:var(--muted); padding:0 1px; font-size:14px; }
   .chip .ic:hover { color:var(--accent); }
-  #field-search { width:100%; padding:5px 8px; border:1px solid var(--border); border-radius:6px; font-size:12px; margin-bottom:6px; }
+  #field-search { width:100%; padding:5px 8px; border:1px solid var(--border); border-radius:6px; font-size:14px; margin-bottom:6px; }
+  .fields-sub { font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); font-weight:600; margin:8px 0 3px; border-top:1px solid var(--border); padding-top:7px; }
+  .field-row.measure .fname { display:flex; align-items:center; gap:5px; }
+  .field-row.measure .badge { font-size:11px; background:var(--calc); border:1px solid var(--calc-border); border-radius:8px; padding:0 5px; flex:0 0 auto; }
 
   /* view controls */
-  .viewbar { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:10px; }
-  .seg { display:inline-flex; border:1px solid var(--border); border-radius:6px; overflow:hidden; }
-  .seg button { border:0; border-right:1px solid var(--border); border-radius:0; background:#fff; }
+  .viewbar { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:12px; }
+  .seg { display:inline-flex; border:1px solid var(--border); border-radius:var(--radius-sm); overflow:hidden; box-shadow:var(--shadow); }
+  .seg button { border:0; border-right:1px solid var(--border); border-radius:0; background:var(--surface); box-shadow:none; }
   .seg button:last-child { border-right:0; }
   .seg button.on { background:var(--accent); color:#fff; }
 
-  #status { font-size:12px; color:var(--muted); margin-bottom:8px; }
-  #status.error { color:#cf222e; background:var(--error-bg); border:1px solid var(--error-border); border-radius:6px; padding:10px 12px; white-space:pre-wrap; }
+  #status { font-size:14px; color:var(--muted); margin-bottom:10px; }
+  #status.error { color:#b42318; background:var(--error-bg); border:1px solid var(--error-border); border-radius:var(--radius-sm); padding:10px 12px; white-space:pre-wrap; box-shadow:var(--shadow); }
   #status .spinner { display:inline-block; width:11px; height:11px; margin-right:7px; border:2px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin .7s linear infinite; vertical-align:-1px; }
   @keyframes spin { to { transform:rotate(360deg); } }
 
   /* pivot table */
-  .table-scroll { overflow:auto; max-width:100%; border:1px solid var(--border); border-radius:8px; }
-  table.pivot { border-collapse:collapse; font-size:12px; }
-  table.pivot th, table.pivot td { border:1px solid var(--border); padding:3px 8px; white-space:nowrap; }
-  table.pivot thead th { background:var(--header-bg); position:sticky; top:0; z-index:2; text-align:center; }
+  .table-scroll { overflow:auto; max-width:100%; border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); background:var(--surface); }
+  table.pivot { border-collapse:separate; border-spacing:0; font-size:14px; }
+  table.pivot th, table.pivot td { border-right:1px solid var(--border); border-bottom:1px solid var(--border); padding:5px 10px; white-space:nowrap; }
+  table.pivot thead th { background:var(--header-bg); position:sticky; top:0; z-index:2; text-align:center; font-weight:600; color:var(--muted); }
   table.pivot th.rowhdr { text-align:left; background:var(--header-bg); }
   table.pivot td.val { text-align:right; font-variant-numeric:tabular-nums; }
   table.pivot th[data-sort] { cursor:pointer; user-select:none; }
-  table.pivot th[data-sort]:hover { background:#eaeef2; }
-  .viewbar label.tg { display:inline-flex; gap:5px; align-items:center; color:var(--muted); font-size:12px; }
-  table.pivot td.rowlbl { text-align:left; background:#fbfcfd; }
-  table.pivot tr.grand td, table.pivot td.gtot, table.pivot th.gtot { background:var(--tot); font-weight:600; }
-  table.pivot tr.subtot td { background:#eef2f7; font-weight:600; }
-  table.pivot td.rowlbl.subtot { background:#e4eaf1; }
+  table.pivot th[data-sort]:hover { background:var(--accent-weak); color:var(--accent); }
+  .viewbar label.tg { display:inline-flex; gap:5px; align-items:center; color:var(--muted); font-size:14px; }
+  table.pivot td.rowlbl { text-align:left; background:var(--surface); }
+  table.pivot.stepped tr.grp-row > td.rowlbl { font-weight:600; }
+  .ctoggle { display:inline-block; width:14px; cursor:pointer; color:var(--accent); user-select:none; font-size:11px; }
+  .ctoggle-sp { display:inline-block; width:14px; }
+  table.pivot tbody tr:nth-child(even) td { background:#f6f7fb; }
+  table.pivot tbody tr:nth-child(even) td.rowlbl { background:#eef1f6; }
+  table.pivot tr.grand td, table.pivot td.gtot, table.pivot th.gtot { background:var(--tot)!important; font-weight:600; }
+  table.pivot tr.subtot td { background:#eef0f8!important; font-weight:600; }
+  table.pivot td.rowlbl.subtot { background:#e6e9f5!important; }
+  table.pivot tbody tr:hover td { background:var(--accent-weak)!important; }
   .empty-note { color:var(--muted); padding:40px 24px; text-align:center; }
-  .empty-note .big { font-size:30px; display:block; margin-bottom:8px; opacity:.7; }
-  .empty-note .hint2 { font-size:12px; margin-top:6px; }
+  .empty-note .big { font-size:32px; display:block; margin-bottom:8px; opacity:.7; }
+  .empty-note .hint2 { font-size:14px; margin-top:6px; }
   #chartopts { display:none; flex-wrap:wrap; gap:14px; align-items:center; margin-bottom:10px; padding:8px 10px; border:1px solid var(--border); border-radius:8px; background:var(--header-bg); }
-  #chartopts label { display:inline-flex; gap:5px; align-items:center; font-size:12px; color:var(--fg); }
+  #chartopts label { display:inline-flex; gap:5px; align-items:center; font-size:14px; color:var(--fg); }
   #combo-cfg { display:none; gap:10px; flex-wrap:wrap; align-items:center; width:100%; }
-  #combo-cfg .cc { display:inline-flex; gap:4px; align-items:center; border:1px solid var(--border); border-radius:6px; padding:2px 6px; background:#fff; font-size:11px; }
-  #combo-cfg select { font-size:11px; padding:1px 2px; border:1px solid var(--border); border-radius:4px; }
+  #combo-cfg .cc { display:inline-flex; gap:4px; align-items:center; border:1px solid var(--border); border-radius:6px; padding:2px 6px; background:#fff; font-size:13px; }
+  #combo-cfg select { font-size:13px; padding:1px 2px; border:1px solid var(--border); border-radius:4px; }
   .iconbtn { padding:5px 9px; }
   #chart { width:100%; min-height:480px; }
 
@@ -92,41 +116,139 @@
   #flt .h { padding:8px 10px; border-bottom:1px solid var(--border); }
   #flt .t { font-weight:600; margin-bottom:6px; word-break:break-word; }
   #flt input.s { width:100%; padding:5px 8px; border:1px solid var(--border); border-radius:6px; }
-  #flt .sub { display:flex; justify-content:space-between; margin-top:6px; color:var(--muted); font-size:11px; }
+  #flt .sub { display:flex; justify-content:space-between; margin-top:6px; color:var(--muted); font-size:13px; }
   #flt .sub a { color:var(--accent); cursor:pointer; }
-  #flt .list { max-height:240px; overflow-y:auto; padding:6px 10px; }
-  #flt .list label { display:flex; gap:7px; align-items:center; padding:2px 0; cursor:pointer; }
+  #flt .list { max-height:260px; overflow-y:auto; padding:6px 10px; }
+  #flt .list label { display:flex; gap:7px; align-items:center; padding:2px 0; cursor:pointer; min-width:0; }
   #flt .list label span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  #flt .frow { display:flex; align-items:center; gap:6px; }
+  #flt .frow label { flex:1 1 auto; }
+  #flt .only { color:var(--accent); cursor:pointer; font-size:13px; visibility:hidden; flex:0 0 auto; }
+  #flt .frow:hover .only, #flt .grp:hover .only { visibility:visible; }
+  #flt .grp { display:flex; align-items:center; gap:5px; padding:2px 0; }
+  #flt .grp .tog { width:12px; cursor:pointer; color:var(--muted); flex:0 0 auto; user-select:none; }
+  #flt .grp label { flex:1 1 auto; font-weight:600; }
+  #flt .grp.mon label { font-weight:500; }
+  #flt .grp.mon, #flt .frow.lf { padding-left:16px; }
+  #flt .frow.lf { padding-left:30px; }
   .pop .foot { display:flex; justify-content:flex-end; gap:8px; padding:8px 10px; border-top:1px solid var(--border); }
   #calc { width:420px; max-width:94vw; padding:0; }
   #calc .h { padding:10px 12px; border-bottom:1px solid var(--border); font-weight:600; }
   #calc .body2 { padding:12px; }
-  #calc label.lbl { display:block; font-size:11px; color:var(--muted); margin:0 0 3px; }
-  #calc input, #calc textarea { width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:6px; font-size:12px; }
+  #calc label.lbl { display:block; font-size:13px; color:var(--muted); margin:0 0 3px; }
+  #calc input, #calc textarea { width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:6px; font-size:14px; }
   #calc textarea { font-family:ui-monospace,Menlo,monospace; min-height:60px; resize:vertical; }
-  #calc .hint { font-size:11px; color:var(--muted); margin-top:6px; }
-  #calc .err { color:#cf222e; font-size:11px; margin-top:6px; min-height:14px; }
-  #calc-ac { position:fixed; z-index:1100; background:#fff; border:1px solid var(--border); border-radius:6px; box-shadow:0 6px 20px rgba(0,0,0,.15); max-height:200px; overflow-y:auto; display:none; font-size:12px; }
+  #calc .hint { font-size:13px; color:var(--muted); margin-top:6px; }
+  #calc .hint code, .save-toggle code { background:var(--surface); border:1px solid var(--border); border-radius:4px; padding:0 4px; font-size:12px; }
+  .save-toggle { display:flex; gap:9px; align-items:flex-start; margin-top:12px; padding:9px 11px; border:1px solid var(--border); border-radius:var(--radius-sm); background:var(--header-bg); cursor:pointer; font-size:13px; color:var(--fg); }
+  .save-toggle:hover { border-color:var(--chip-border); }
+  #calc .save-toggle input { margin:2px 0 0; width:16px; min-width:16px; height:16px; padding:0; border-radius:3px; flex:0 0 auto; accent-color:var(--accent); cursor:pointer; }
+  .save-toggle > span { display:flex; flex-direction:column; gap:2px; }
+  .save-toggle .sub { color:var(--muted); font-size:12px; font-weight:400; }
+  #calc .err { color:#cf222e; font-size:13px; margin-top:6px; min-height:14px; }
+  #calc-ac { position:fixed; z-index:1100; background:#fff; border:1px solid var(--border); border-radius:6px; box-shadow:0 6px 20px rgba(0,0,0,.15); max-height:200px; overflow-y:auto; display:none; font-size:14px; }
   #calc-ac .it { padding:4px 10px; cursor:pointer; display:flex; gap:8px; justify-content:space-between; align-items:center; }
   #calc-ac .it.on { background:var(--accent); color:#fff; }
-  #calc-ac .it .k { font-size:10px; opacity:.65; }
+  #calc-ac .it .k { font-size:12px; opacity:.65; }
+
+  /* ---- app mode toggle ---- */
+  .modeseg { display:inline-flex; border:1px solid var(--border); border-radius:var(--radius-sm); overflow:hidden; box-shadow:var(--shadow); margin-left:auto; }
+  .modeseg button { border:0; border-right:1px solid var(--border); border-radius:0; background:var(--surface); box-shadow:none; font-weight:600; }
+  .modeseg button:last-child { border-right:0; }
+  .modeseg button.on { background:var(--accent); color:#fff; }
+
+  /* ---- dashboard ---- */
+  #dashboard { padding:16px 20px 80px; }
+  #dtabs { display:flex; gap:7px; align-items:center; flex-wrap:wrap; margin-bottom:14px; }
+  .dtab { display:inline-flex; align-items:center; gap:8px; padding:7px 13px; border:1px solid var(--border); border-radius:var(--radius-sm); background:var(--surface); box-shadow:var(--shadow); cursor:pointer; font-size:14px; font-weight:500; user-select:none; }
+  .dtab.on { background:var(--accent); color:#fff; border-color:transparent; }
+  .dtab .x { opacity:.55; font-weight:bold; }
+  .dtab .x:hover { opacity:1; }
+  .addtab { font-size:14px; }
+  .dash-bar { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:14px; }
+  .dash-bar .gf-label { font-size:13px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; font-weight:600; margin-right:2px; }
+  .gf-chip { display:inline-flex; align-items:center; gap:6px; background:var(--chip); border:1px solid var(--chip-border); border-radius:var(--radius-sm); padding:4px 9px; font-size:14px; box-shadow:var(--shadow); cursor:pointer; }
+  .gf-chip .x { color:var(--muted); font-weight:bold; }
+  .dash-bar .spacer { flex:1 1 auto; }
+  #gf-add { padding:6px 10px; border:1px solid var(--border); border-radius:var(--radius-sm); background:var(--surface); box-shadow:var(--shadow); font-size:14px; font-family:inherit; cursor:pointer; }
+  .slicer-tile .tile-head { background:var(--accent-weak); }
+  .grid-stack-item-content.xf-on { outline:2px solid var(--accent); outline-offset:-2px; }
+  .grid-stack-item-content.xf-on .tile-head { background:var(--accent-weak); }
+  .tile-head .ic.on { color:var(--accent); }
+  #imp-list .imp-item { padding:5px 7px; cursor:pointer; border-radius:5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  #imp-list .imp-item:hover { background:var(--accent-weak); color:var(--accent); }
+  .slicer { display:flex; flex-direction:column; gap:6px; height:100%; }
+  .slicer .sl-field { font-weight:600; font-size:13px; color:var(--accent); }
+  .slicer .sl-search { padding:5px 8px; border:1px solid var(--border); border-radius:6px; font-size:13px; }
+  .slicer .sl-sub { font-size:12px; color:var(--muted); }
+  .slicer .sl-sub a { color:var(--accent); cursor:pointer; }
+  .slicer .sl-list { flex:1 1 auto; min-height:0; overflow:auto; border:1px solid var(--border); border-radius:6px; padding:4px 8px; }
+  .slicer .sl-list label { display:flex; gap:7px; align-items:center; padding:2px 0; font-size:13px; cursor:pointer; }
+  .slicer .sl-list label span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .slicer .sl-more { color:var(--muted); font-style:italic; font-size:12px; padding:4px 0; }
+  .slicer .sl-range { display:flex; flex-direction:column; gap:8px; }
+  .slicer .sl-range label { display:flex; gap:6px; align-items:center; font-size:13px; color:var(--muted); }
+  .slicer .sl-range input { flex:1 1 auto; padding:5px 8px; border:1px solid var(--border); border-radius:6px; font-size:13px; }
+  .slicer .sl-clear { color:var(--accent); cursor:pointer; font-size:12px; }
+  .dash-bar .units { display:inline-flex; align-items:center; gap:5px; font-size:14px; color:var(--muted); }
+  .dash-bar .units input { width:48px; padding:4px 6px; border:1px solid var(--border); border-radius:6px; font-size:14px; }
+  .grid-stack { background:transparent; }
+  .grid-stack-item-content { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden; display:flex; flex-direction:column; }
+  .tile-head { display:flex; align-items:center; gap:6px; padding:7px 10px; border-bottom:1px solid var(--border); cursor:move; background:var(--header-bg); flex:0 0 auto; }
+  .tile-head .tt { flex:1 1 auto; font-weight:600; font-size:14.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .tile-head .ic { cursor:pointer; color:var(--muted); font-size:14px; padding:0 2px; }
+  .tile-head .ic:hover { color:var(--accent); }
+  .tile-body { flex:1 1 auto; min-height:0; overflow:auto; padding:8px 10px; }
+  .tile-body .table-scroll { box-shadow:none; border:0; }
+  .tile-body .empty-note { padding:18px; }
+  .kpi { height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:6px; padding:10px; overflow:hidden; }
+  #result .kpi { min-height:220px; }
+  .tile-body:has(.kpi) { overflow:hidden; }
+  .kpi-val { font-size:40px; font-weight:700; letter-spacing:-.02em; color:var(--accent); line-height:1; }
+  .kpi-lbl { font-size:14.5px; color:var(--muted); font-weight:500; }
+  .kpi-sub { display:flex; flex-wrap:wrap; gap:6px 16px; justify-content:center; margin-top:10px; padding-top:8px; border-top:1px solid var(--border); max-width:100%; }
+  .kpi-sub-item { font-size:13px; color:var(--muted); white-space:nowrap; }
+  .kpi-sub-item b { color:var(--fg); font-weight:600; }
+  #kpiopts { display:none; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:12px; padding:8px 10px; border:1px solid var(--border); border-radius:var(--radius); background:var(--surface); box-shadow:var(--shadow); }
+  #kpiopts .kpi-opt-label { font-size:13px; color:var(--muted); font-weight:500; }
+  #kpi-swatches { display:inline-flex; gap:5px; flex-wrap:wrap; }
+  .kpi-sw { width:20px; height:20px; border-radius:6px; cursor:pointer; border:2px solid #fff; box-shadow:0 0 0 1px var(--border); }
+  .kpi-sw.on { box-shadow:0 0 0 2px var(--accent); }
+  #kpiopts .kpi-custom { display:inline-flex; align-items:center; gap:5px; font-size:13px; color:var(--muted); cursor:pointer; }
+  #kpiopts .kpi-custom input { width:26px; height:22px; padding:0; border:1px solid var(--border); border-radius:4px; cursor:pointer; }
+  .dash-empty { text-align:center; color:var(--muted); padding:60px 20px; }
+  .dash-empty .big { font-size:36px; display:block; margin-bottom:10px; opacity:.6; }
 </style>
 </head>
 <body>
 <header class="app">
-  <h1>Sheets Pivot &amp; Charts</h1>
-  <div class="sub">Add fields to Rows / Columns / Values / Filters. Each value carries its own aggregation, so multiple measures coexist. Define ratios in “+ Calculated measure”.</div>
+  <div style="display:flex; align-items:center; gap:12px;">
+    <div class="brandwrap">
+      <div class="brandmark">SSE</div>
+      <div>
+        <h1>SSE Business Intelligence</h1>
+        <div class="sub">Nagpur MS Allocation</div>
+      </div>
+    </div>
+    <div class="modeseg" id="modeseg">
+      <button data-mode="builder" class="on">Builder</button>
+      <button data-mode="dashboard">Dashboard</button>
+    </div>
+  </div>
   <div class="topbar">
     <input id="endpoint" type="text" spellcheck="false"
       value="https://script.google.com/macros/s/AKfycbz-RkeGCheRjEZ49MuU__LhAGOpkr5o503rMSgw7WKVt8mp-e2gU4qRx4uOEcUR1TTl/exec" />
     <button id="refresh" class="primary">Refresh data</button>
     <button id="undo" class="iconbtn" title="Undo (Ctrl+Z)" disabled>↶</button>
     <button id="redo" class="iconbtn" title="Redo (Ctrl+Y)" disabled>↷</button>
+    <button id="exportbtn" title="Download this workspace (measures + dashboards + endpoint) as JSON">⬇ Export</button>
+    <button id="importbtn" title="Load a workspace from this site or a file">⬆ Import</button>
     <button id="reset">Reset layout</button>
+    <button id="clearall" title="Delete ALL saved measures, charts and dashboards in this browser">🗑 Clear all</button>
   </div>
 </header>
 
-<div class="layout">
+<div class="layout" id="builder">
   <div class="panel">
     <div class="card">
       <h3>Fields</h3>
@@ -159,6 +281,7 @@
       <div class="seg" id="viewseg">
         <button data-view="table" class="on">Table</button>
         <button data-view="chart">Chart</button>
+        <button data-view="kpi">KPI</button>
       </div>
       <select id="charttype" style="display:none; padding:5px; border:1px solid var(--border); border-radius:6px;">
         <optgroup label="Cartesian (uses Rows × Columns × measures)">
@@ -176,23 +299,111 @@
           <option value="icicle">Icicle</option>
         </optgroup>
       </select>
-      <span id="hiernote" style="display:none; color:var(--muted); font-size:11px;"></span>
+      <span id="hiernote" style="display:none; color:var(--muted); font-size:13px;"></span>
       <span style="flex:1 1 auto;"></span>
+      <label class="tg" id="collapse-wrap"><input type="checkbox" id="tg-collapsible" /> Collapsible</label>
       <label class="tg" id="subtot-wrap"><input type="checkbox" id="tg-subtot" /> Subtotals</label>
       <label class="tg" id="totals-wrap"><input type="checkbox" id="tg-totals" checked /> Totals</label>
       <button id="copybtn" title="Copy the current table to the clipboard">⧉ Copy</button>
       <button id="csvbtn" title="Download the current table as CSV">⬇ CSV</button>
+      <button id="newchart" title="Start a blank chart (clears the builder)">✛ New chart</button>
+      <button id="pincancel" style="display:none;" title="Stop editing this tile">Cancel edit</button>
+      <button id="pinbtn" class="primary" title="Save this view as a dashboard tile">📌 Pin to dashboard</button>
     </div>
 
     <div id="chartopts">
       <label><input type="checkbox" id="opt-legend" checked /> Legend</label>
       <label><input type="checkbox" id="opt-labels" /> Data labels</label>
+      <label><input type="checkbox" id="opt-labelseries" /> Include series in label</label>
       <div id="combo-cfg"></div>
+    </div>
+
+    <div id="kpiopts" style="display:none;">
+      <span class="kpi-opt-label">Number colour:</span>
+      <span id="kpi-swatches"></span>
+      <label class="kpi-custom" title="Custom colour">More <input type="color" id="kpi-color-custom" value="#003049" /></label>
     </div>
 
     <div id="status">Loading…</div>
     <div id="result"></div>
   </div>
+</div>
+
+<!-- dashboard -->
+<div id="dashboard" style="display:none;">
+  <div id="dtabs"></div>
+  <div class="dash-bar">
+    <span class="gf-label">Global filters</span>
+    <span id="gf-chips"></span>
+    <select id="gf-add"><option value="">+ Add filter…</option></select>
+    <button id="add-slicer" title="Add a slicer that filters selected tiles">+ Slicer</button>
+    <span class="spacer"></span>
+    <span class="units">Columns <input id="dash-cols" type="number" min="1" max="12" title="1–12 columns" /></span>
+    <span class="units">Row height <input id="dash-cellh" type="number" min="20" max="120" step="2" /></span>
+    <button id="dash-refresh" class="primary">Refresh data</button>
+  </div>
+  <div class="grid-stack" id="grid"></div>
+  <div id="dash-empty" class="dash-empty" style="display:none;"><span class="big">▦</span><div>No tiles yet.</div><div style="font-size:14px;margin-top:6px;">Build a view in <b>Builder</b>, then click <b>📌 Pin to dashboard</b>.</div></div>
+</div>
+
+<!-- pin dialog -->
+<div id="pin" class="pop" style="width:340px;">
+  <div class="h" style="padding:10px 12px;border-bottom:1px solid var(--border);font-weight:600;">Pin to dashboard</div>
+  <div style="padding:12px;">
+    <label style="display:block;font-size:13px;color:var(--muted);margin-bottom:3px;">Tile title</label>
+    <input id="pin-title" type="text" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:14px;" />
+    <label style="display:block;font-size:13px;color:var(--muted);margin:10px 0 3px;">Tab</label>
+    <select id="pin-tab" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:14px;"></select>
+    <div id="pin-newtab-wrap" style="display:none;">
+      <label style="display:block;font-size:13px;color:var(--muted);margin:10px 0 3px;">New tab name</label>
+      <input id="pin-newtab" type="text" placeholder="e.g. MS Overview" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:14px;" />
+    </div>
+  </div>
+  <div class="foot"><button id="pin-cancel">Cancel</button><button id="pin-ok" class="primary">Add tile</button></div>
+</div>
+
+<!-- slicer config dialog -->
+<div id="slicer" class="pop" style="width:360px;">
+  <div class="h" style="padding:10px 12px;border-bottom:1px solid var(--border);font-weight:600;">Slicer</div>
+  <div style="padding:12px;">
+    <label style="display:block;font-size:13px;color:var(--muted);margin-bottom:3px;">Field</label>
+    <select id="slicer-field" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:14px;"></select>
+    <label style="display:block;font-size:13px;color:var(--muted);margin:10px 0 3px;">Type</label>
+    <div style="display:flex;gap:14px;font-size:14px;">
+      <label style="display:flex;gap:5px;align-items:center;cursor:pointer;"><input type="radio" name="slicer-type" value="list" checked /> List (pick values)</label>
+      <label style="display:flex;gap:5px;align-items:center;cursor:pointer;"><input type="radio" name="slicer-type" value="range" /> Range (min–max)</label>
+    </div>
+    <label style="display:block;font-size:13px;color:var(--muted);margin:10px 0 3px;">Applies to</label>
+    <label style="display:flex;gap:6px;align-items:center;font-size:13px;cursor:pointer;margin-bottom:5px;"><input type="checkbox" id="slicer-all" checked /> All tiles on this tab</label>
+    <div id="slicer-targets" style="max-height:160px;overflow:auto;border:1px solid var(--border);border-radius:6px;padding:6px 8px;"></div>
+  </div>
+  <div class="foot"><button id="slicer-cancel">Cancel</button><button id="slicer-ok" class="primary">Add slicer</button></div>
+</div>
+
+<!-- cross-filter dialog -->
+<div id="xfilter" class="pop" style="width:340px;">
+  <div class="h" style="padding:10px 12px;border-bottom:1px solid var(--border);font-weight:600;">Chart as filter</div>
+  <div style="padding:12px;">
+    <label style="display:flex;gap:6px;align-items:center;font-size:14px;cursor:pointer;"><input type="checkbox" id="xf-on" /> Clicking a bar/point filters other tiles</label>
+    <div style="font-size:12px;color:var(--muted);margin:4px 0 10px;">Click a bar / point / slice / node to filter; click it again to clear. Sunburst &amp; treemap filter by the clicked node's full path.</div>
+    <label style="display:block;font-size:13px;color:var(--muted);margin-bottom:3px;">Applies to</label>
+    <label style="display:flex;gap:6px;align-items:center;font-size:13px;cursor:pointer;margin-bottom:5px;"><input type="checkbox" id="xf-all" checked /> All other tiles on this tab</label>
+    <div id="xf-targets" style="max-height:160px;overflow:auto;border:1px solid var(--border);border-radius:6px;padding:6px 8px;"></div>
+  </div>
+  <div class="foot"><button id="xf-cancel">Cancel</button><button id="xf-ok" class="primary">Save</button></div>
+</div>
+
+<!-- import dialog -->
+<div id="impdlg" class="pop" style="width:400px;">
+  <div class="h" style="padding:10px 12px;border-bottom:1px solid var(--border);font-weight:600;">Import workspace</div>
+  <div style="padding:12px;">
+    <div style="font-size:13px;color:var(--muted);margin-bottom:5px;">Saved workspaces in this site's folder:</div>
+    <div id="imp-list" style="max-height:190px;overflow:auto;border:1px solid var(--border);border-radius:6px;padding:6px 8px;font-size:13px;">Loading…</div>
+    <div style="font-size:13px;color:var(--muted);margin:12px 0 4px;">…or import from a file:</div>
+    <input type="file" id="imp-file" accept=".json,application/json" style="font-size:13px;" />
+    <div id="imp-err" style="color:#b42318;font-size:12px;margin-top:8px;min-height:14px;white-space:pre-wrap;"></div>
+  </div>
+  <div class="foot"><button id="imp-cancel">Close</button></div>
 </div>
 
 <!-- filter popup -->
@@ -213,8 +424,11 @@
     <label class="lbl">Name</label>
     <input id="calc-name" type="text" placeholder="e.g. Avg score per lead" />
     <label class="lbl" style="margin-top:10px;">Expression</label>
-    <textarea id="calc-expr" placeholder="SUM([Lead score]) / COUNT([Lead Id])"></textarea>
-    <div class="hint">Use <code>FUNC([Field name])</code>: SUM, AVG, COUNT, COUNTNUMBERS, COUNTUNIQUE, MIN, MAX, STDEV, VAR. Combine with + − × ÷ and parentheses.</div>
+    <textarea id="calc-expr" placeholder='COUNTUNIQUE([Lead Id], [MD Stage] CONTAINS "MD")'></textarea>
+    <div class="hint"><b>FUNC([Field])</b>: SUM, AVG, COUNT, COUNTNUMBERS, COUNTUNIQUE, MIN, MAX, STDEV, VAR — combine with + − × ÷ and ( ).<br>
+      Optional filter: <b>FUNC([Field], condition)</b>. Conditions use <code>= != &gt; &lt; &gt;= &lt;=</code>, <code>CONTAINS</code>, <code>STARTSWITH</code>, <code>ENDSWITH</code>, <code>IN("a","b")</code>, joined with <code>AND</code> / <code>OR</code> / <code>NOT</code> and ( ).<br>
+      Reference a saved measure by name: <code>[MD leads] / COUNTUNIQUE([Lead Id])</code>.</div>
+    <label id="calc-save-wrap" class="save-toggle"><input type="checkbox" id="calc-save" /><span><b>Save as a reusable measure</b><span class="sub">Adds it to <b>Measures</b> in the Fields panel — reuse it anywhere and reference it from other measures as <code>[name]</code>.</span></span></label>
     <div class="err" id="calc-err"></div>
   </div>
   <div class="foot"><button class="cancel" id="calc-cancel">Cancel</button><button class="primary" id="calc-add">Add measure</button></div>
@@ -224,24 +438,34 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.13.2/jquery-ui.min.js"></script>
 <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
+<script src="https://cdn.jsdelivr.net/npm/gridstack@10.3.1/dist/gridstack-all.js"></script>
 <script>
 (function () {
   "use strict";
   var LS_KEY = "sheetsPivot.state.v2";
   var SEP = "␟"; // unit separator for composite keys
   var AGGS = ["Sum","Average","Count","Count Numbers","Count Unique","Min","Max","StdDev","Var"];
+  var PALETTE = ["#003049","#C1121F","#669BBC","#780000","#E09F3E","#2A6F97","#8C2F39","#335C67","#BC6C25","#5A7D9A","#1D3557","#9E2A2B","#A8763E","#4C8577"];
+  var PLOT_FONT = { family:"Inter, system-ui, sans-serif", color:"#1b2030", size:14 };
+  var AXIS = { automargin:true, gridcolor:"#eceef3", linecolor:"#e2e5ec", zerolinecolor:"#e2e5ec", tickcolor:"#e2e5ec" };
+  var HOVERLABEL = { bgcolor:"#ffffff", bordercolor:"#003049", align:"left", namelength:-1, font:{ family:"Inter, system-ui, sans-serif", size:13, color:"#1b2030" } };
+  var PLOT_BASE = { colorway:PALETTE, font:PLOT_FONT, paper_bgcolor:"rgba(0,0,0,0)", plot_bgcolor:"rgba(0,0,0,0)", hoverlabel:HOVERLABEL };
 
   // ---------------- data + state ----------------
   var headers = [], rows = [], fieldIndex = {}, distinct = {};
-  var uid = 1;
+  var uid = 1, smuid = 1;
   var state = {
     rows: [], cols: [], filters: [],
     values: [],          // {id, kind:'base', field, agg} | {id, kind:'calc', label, expr}
+    savedMeasures: [],   // reusable calc measures shown in the Fields list: {id, label, expr}
     exclusions: {},      // field -> [excluded string values]
     view: "table", chartType: "bar",
-    sort: { key:"__row__", dir:1 }, totals: true, subtotals: false,
-    chartOpts: { legend:true, labels:false, combo:{} }
+    sort: { key:"__row__", dir:1 }, totals: true, subtotals: false, collapsible: false, collapsed: {},
+    chartOpts: { legend:true, labels:false, labelSeries:false, combo:{}, kpiColor:"#003049" },
+    mode: "builder",
+    dash: { tabs: [{ id:"tab1", name:"Tab 1", tiles:[], global:{} }], activeTabId:"tab1", cols: 10, cellH: 44 }
   };
+  function freshDash(){ return { tabs: [{ id:"tab1", name:"Tab 1", tiles:[], global:{} }], activeTabId:"tab1", cols: 10, cellH: 44 }; }
 
   function $id(x){ return document.getElementById(x); }
   function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
@@ -271,22 +495,119 @@
   }
   var AGG_MAP = { "Sum":"SUM","Average":"AVG","Count":"COUNT","Count Numbers":"COUNTNUMBERS","Count Unique":"COUNTUNIQUE","Min":"MIN","Max":"MAX","StdDev":"STDEV","Var":"VAR" };
 
-  var FN_RE = /\b(SUM|AVG|AVERAGE|COUNT|COUNTNUMBERS|COUNTUNIQUE|MIN|MAX|STDEV|VAR)\s*\(\s*\[([^\]]+)\]\s*\)/gi;
-  function compileCalc(expr){
-    var t = expr.replace(FN_RE, function(_, fn, field){ return 'A("'+fn.toUpperCase()+'","'+field.replace(/"/g,'\\"')+'")'; });
-    var stripped = t.replace(/A\([^)]*\)/g, "0");
-    if(/[^0-9+\-*/%.()\seE]/.test(stripped)) throw new Error("Invalid characters in expression.");
-    return new Function("A", "return ("+t+");");
+  // ---- calculated-measure engine: arithmetic over aggregates, each with an optional filter ----
+  // factor := number | '(' expr ')' | FUNC '(' [Field] (',' predicate)? ')'
+  // predicate := orP; orP := andP (OR andP)*; andP := notP (AND notP)*
+  // notP := NOT notP | '(' predicate ')' | compare
+  // compare := [Field] ( op value | IN '(' value (',' value)* ')' )
+  // op := = == != <> > < >= <= CONTAINS STARTSWITH ENDSWITH ~
+  var CALC_FUNCS = {SUM:1,AVG:1,AVERAGE:1,COUNT:1,COUNTNUMBERS:1,COUNTUNIQUE:1,MIN:1,MAX:1,STDEV:1,VAR:1};
+  function _s(v){ return v===null||v===undefined?"":String(v); }
+  function _isNum(v){ return v!=="" && v!==null && v!==undefined && isFinite(Number(v)); }
+  function _eq(a,b){ if(_isNum(a)&&_isNum(b)) return Number(a)===Number(b); return _s(a).toLowerCase()===_s(b).toLowerCase(); }
+  function calcTokenize(s){
+    var toks=[], i=0, n=s.length, twos={"==":1,"!=":1,"<>":1,">=":1,"<=":1};
+    while(i<n){
+      var c=s[i];
+      if(/\s/.test(c)){ i++; continue; }
+      if(c==="["){ var j=s.indexOf("]", i+1); if(j<0) throw new Error("Unclosed [field]"); toks.push({t:"field", v:s.slice(i+1,j)}); i=j+1; continue; }
+      if(c==='"'||c==="'"){ var q=c, k=i+1, str=""; while(k<n && s[k]!==q){ if(s[k]==="\\"&&k+1<n){ str+=s[k+1]; k+=2; } else { str+=s[k]; k++; } } if(k>=n) throw new Error("Unclosed string"); toks.push({t:"str", v:str}); i=k+1; continue; }
+      if(/[0-9.]/.test(c)){ var mm=s.slice(i).match(/^[0-9]*\.?[0-9]+([eE][+-]?[0-9]+)?/); if(!mm) throw new Error("Bad number"); toks.push({t:"num", v:parseFloat(mm[0])}); i+=mm[0].length; continue; }
+      var pair=s.substr(i,2); if(twos[pair]){ toks.push({t:"op", v:pair}); i+=2; continue; }
+      if("+-*/()=<>,~".indexOf(c)>=0){ toks.push({t:"op", v:c}); i++; continue; }
+      var w=s.slice(i).match(/^[A-Za-z_][A-Za-z0-9_]*/); if(!w) throw new Error("Unexpected '"+c+"'"); toks.push({t:"word", v:w[0]}); i+=w[0].length; continue;
+    }
+    toks.push({t:"end"}); return toks;
+  }
+  function findSavedByLabel(name){ var sm=state.savedMeasures||[], n=String(name).trim().toLowerCase(); for(var i=0;i<sm.length;i++){ if(String(sm[i].label).trim().toLowerCase()===n) return sm[i]; } return null; }
+  function compileCalc(expr, stack){
+    stack = stack || [];   // names currently being compiled, for circular-reference detection
+    var toks=calcTokenize(expr), p=0;
+    function peek(){ return toks[p]; }
+    function next(){ return toks[p++]; }
+    function isW(v){ var t=peek(); return t.t==="word" && t.v.toUpperCase()===v; }
+    function expect(v){ var t=next(); if(t.t!=="op"||t.v!==v) throw new Error("Expected '"+v+"'"); }
+    function parseExpr(){ return parseAdd(); }
+    function parseAdd(){ var l=parseMul(); while(peek().t==="op"&&(peek().v==="+"||peek().v==="-")){ var o=next().v, r=parseMul(); l=bin(o,l,r); } return l; }
+    function parseMul(){ var l=parseUnary(); while(peek().t==="op"&&(peek().v==="*"||peek().v==="/")){ var o=next().v, r=parseUnary(); l=bin(o,l,r); } return l; }
+    function parseUnary(){ if(peek().t==="op"&&peek().v==="-"){ next(); var f=parseUnary(); return function(rows){ var x=f(rows); return x===null?null:-x; }; } return parseFactor(); }
+    function bin(o,l,r){ return function(rows){ var a=l(rows), b=r(rows); if(a===null||b===null){ if(o==="/") return null; a=a||0; b=b||0; } switch(o){ case "+":return a+b; case "-":return a-b; case "*":return a*b; case "/":return b===0?null:a/b; } }; }
+    function parseFactor(){
+      var t=peek();
+      if(t.t==="num"){ next(); var v=t.v; return function(){ return v; }; }
+      if(t.t==="op"&&t.v==="("){ next(); var e=parseExpr(); expect(")"); return e; }
+      if(t.t==="word"){
+        var fn=t.v.toUpperCase();
+        if(!CALC_FUNCS[fn]) throw new Error("Unknown function '"+t.v+"'");
+        next(); expect("(");
+        var fld=next(); if(fld.t!=="field") throw new Error(fn+"() needs a [field] as its first argument");
+        if(fieldIndex[fld.v]===undefined) throw new Error("Unknown field: ["+fld.v+"]");
+        var field=fld.v, pred=null;
+        if(peek().t==="op"&&peek().v===","){ next(); pred=parsePred(); }
+        expect(")");
+        return function(rows){ return aggOne(fn, field, pred? rows.filter(pred) : rows); };
+      }
+      if(t.t==="field"){ // a bare [Name] in arithmetic = reference to a saved (reusable) measure
+        next();
+        var refName=t.v, key=refName.trim().toLowerCase();
+        var sm=findSavedByLabel(refName);
+        if(!sm) throw new Error('Unknown measure: ['+refName+'] — save it as a reusable measure first');
+        if(stack.indexOf(key)>=0) throw new Error('Circular measure reference: ['+refName+']');
+        var subFn=compileCalc(sm.expr, stack.concat(key));
+        return function(rows){ return subFn(rows); };
+      }
+      throw new Error("Unexpected token in expression");
+    }
+    function parsePred(){ return parseOr(); }
+    function parseOr(){ var l=parseAnd(); while(isW("OR")){ next(); var r=parseAnd(); l=(function(a,b){ return function(row){ return a(row)||b(row); }; })(l,r); } return l; }
+    function parseAnd(){ var l=parseNot(); while(isW("AND")){ next(); var r=parseNot(); l=(function(a,b){ return function(row){ return a(row)&&b(row); }; })(l,r); } return l; }
+    function parseNot(){ if(isW("NOT")){ next(); var f=parseNot(); return function(row){ return !f(row); }; } if(peek().t==="op"&&peek().v==="("){ next(); var e=parsePred(); expect(")"); return e; } return parseCompare(); }
+    function parseCompare(){
+      var lf=next(); if(lf.t!=="field") throw new Error("A condition must start with a [field]");
+      var idx=fieldIndex[lf.v]; if(idx===undefined) throw new Error("Unknown field: ["+lf.v+"]");
+      if(isW("IN")){ next(); expect("("); var vals=[]; while(true){ var vv=next(); if(vv.t==="str"||vv.t==="num") vals.push(_s(vv.v).toLowerCase()); else throw new Error("IN(...) needs quoted values"); if(peek().t==="op"&&peek().v===","){ next(); continue; } break; } expect(")"); var set=new Set(vals); return function(row){ return set.has(_s(row[idx]).toLowerCase()); }; }
+      var ot=next(); var op = ot.t==="word"? ot.v.toUpperCase() : ot.v;
+      var rt=next(); var rfield=null, rconst=null;
+      if(rt.t==="field"){ if(fieldIndex[rt.v]===undefined) throw new Error("Unknown field: ["+rt.v+"]"); rfield=fieldIndex[rt.v]; }
+      else if(rt.t==="str"||rt.t==="num") rconst=rt.v; else throw new Error("Bad value in condition");
+      function rhs(row){ return rfield!==null? row[rfield] : rconst; }
+      return function(row){
+        var a=row[idx], b=rhs(row);
+        switch(op){
+          case "=": case "==": return _eq(a,b);
+          case "!=": case "<>": return !_eq(a,b);
+          case ">": return _isNum(a)&&_isNum(b)&&Number(a)>Number(b);
+          case "<": return _isNum(a)&&_isNum(b)&&Number(a)<Number(b);
+          case ">=": return _isNum(a)&&_isNum(b)&&Number(a)>=Number(b);
+          case "<=": return _isNum(a)&&_isNum(b)&&Number(a)<=Number(b);
+          case "CONTAINS": case "~": return _s(a).toLowerCase().indexOf(_s(b).toLowerCase())>=0;
+          case "STARTSWITH": return _s(a).toLowerCase().lastIndexOf(_s(b).toLowerCase(),0)===0;
+          case "ENDSWITH": var A=_s(a).toLowerCase(), B=_s(b).toLowerCase(); return B==="" ? true : A.indexOf(B, A.length-B.length)!==-1;
+          default: throw new Error("Unknown operator '"+op+"'");
+        }
+      };
+    }
+    var tree=parseExpr(); if(peek().t!=="end") throw new Error("Unexpected text after the expression"); return tree;
   }
   function measureValue(m, grp){
+    if(m.kind==="ref"){ // live link to a saved measure — resolves the CURRENT definition each render
+      var sm=findSaved(m.smId);
+      if(!sm) throw new Error('Measure "'+(m.smId||"")+'" was removed — edit or remove the tiles/values using it.');
+      if(!sm._fn) sm._fn=compileCalc(sm.expr);
+      var rr=sm._fn(grp); return (rr===null||rr===undefined||Number.isNaN(rr))?null:rr;
+    }
     if(m.kind==="calc"){
       if(!m._fn) m._fn = compileCalc(m.expr);
-      var r = m._fn(function(fn,field){ return aggOne(fn, field, grp); });
+      var r = m._fn(grp);
       return (r===null||r===undefined||Number.isNaN(r))?null:r;
     }
     return aggOne(AGG_MAP[m.agg]||"SUM", m.field, grp);
   }
-  function measureLabel(m){ return m.label ? m.label : (m.kind==="calc" ? "(measure)" : (m.agg+" of "+m.field)); }
+  function measureLabel(m){
+    if(m.label) return m.label;  // per-visual display override (works for base, calc and ref — without detaching a ref)
+    if(m.kind==="ref"){ var sm=findSaved(m.smId); return sm? sm.label : "(removed measure)"; }
+    return (m.kind==="calc") ? "(measure)" : (m.agg+" of "+m.field);
+  }
 
   function fmt(v){ if(v===null||v===undefined||Number.isNaN(v)) return ""; if(!isFinite(v)) return "∞"; var n=Number(v); return Number.isInteger(n)? n.toLocaleString() : n.toLocaleString(undefined,{maximumFractionDigits:2}); }
 
@@ -297,11 +618,22 @@
   function cmpTuple(a,b){ for(var i=0;i<a.length;i++){ var x=a[i]||"",y=b[i]||""; var nx=/^-?\d+(\.\d+)?$/.test(x), ny=/^-?\d+(\.\d+)?$/.test(y); var c = (nx&&ny)? (parseFloat(x)-parseFloat(y)) : x.localeCompare(y); if(c) return c; } return 0; }
 
   // ---------------- compute pivot ----------------
-  function passesFilters(row){ for(var f in state.exclusions){ var ex=state.exclusions[f]; if(!ex||!ex.length) continue; var idx=fieldIndex[f]; if(idx===undefined) continue; var v=row[idx]; v=(v===null||v===undefined)?"":String(v); if(ex.indexOf(v)>=0) return false; } return true; }
+  // CTX is the config currently being rendered (the builder `state`, or a dashboard tile's
+  // effective config). It lets the same compute/render code drive both the builder and tiles.
+  var CTX=null, IS_BUILDER_RENDER=true;
+  function cur(){ return CTX||state; }
+  // Build O(1) lookup Sets for active exclusions once per compute (indexOf over big arrays was the hotspot).
+  function buildExclusionSets(exObj){ var list=[]; for(var f in (exObj||{})){ var ex=exObj[f]; if(!ex||!ex.length) continue; var idx=fieldIndex[f]; if(idx===undefined) continue; list.push({ idx:idx, set:(ex instanceof Set)?ex:new Set(ex) }); } return list; }
 
   function compute(){
-    var rf=state.rows, cf=state.cols, ms=state.values;
-    var filtered=[]; for(var i=0;i<rows.length;i++){ if(passesFilters(rows[i])) filtered.push(rows[i]); }
+    var C=cur(); var rf=C.rows||[], cf=C.cols||[], ms=C.values||[];
+    var exList=buildExclusionSets(C.exclusions), nEx=exList.length;
+    var filtered=[];
+    for(var i=0;i<rows.length;i++){
+      var row=rows[i], ok=true;
+      for(var e=0;e<nEx;e++){ var v=row[exList[e].idx]; v=(v===null||v===undefined)?"":String(v); if(exList[e].set.has(v)){ ok=false; break; } }
+      if(ok) filtered.push(row);
+    }
 
     function keyOf(row, fields){ var t=[]; for(var k=0;k<fields.length;k++){ var v=row[fieldIndex[fields[k]]]; t.push((v===null||v===undefined)?"":String(v)); } return t; }
 
@@ -319,7 +651,7 @@
     var cKeys=Object.keys(ckMeta).sort(function(a,b){return cmpTuple(ckMeta[a],ckMeta[b]);});
 
     // optional sort by a measure's row total
-    var sort=state.sort||{key:"__row__",dir:1};
+    var sort=C.sort||{key:"__row__",dir:1};
     if(sort.key && sort.key!=="__row__"){
       var sm=null; ms.forEach(function(m){ if(String(m.id)===String(sort.key)) sm=m; });
       if(sm){ rKeys.sort(function(a,b){ var va=measureValue(sm,rowGrp[a]||[]), vb=measureValue(sm,rowGrp[b]||[]); va=(va===null||!isFinite(va))?-Infinity:va; vb=(vb===null||!isFinite(vb))?-Infinity:vb; return (va-vb)*sort.dir; }); }
@@ -328,16 +660,29 @@
   }
 
   // ---------------- render table ----------------
-  function rowArrow(){ var s=state.sort||{}; return s.key==="__row__"?(s.dir<0?" ▼":" ▲"):""; }
-  function msrArrow(m){ var s=state.sort||{}; return String(s.key)===String(m.id)?(s.dir<0?" ▼":" ▲"):""; }
+  function rowArrow(){ var s=cur().sort||{}; return s.key==="__row__"?(s.dir<0?" ▼":" ▲"):""; }
+  function msrArrow(m){ var s=cur().sort||{}; return String(s.key)===String(m.id)?(s.dir<0?" ▼":" ▲"):""; }
 
-  function renderTable(P){
+  function renderTable(P, el){
     var ms=P.ms, rf=P.rf, cf=P.cf, cKeys=P.cKeys, rKeys=P.rKeys;
-    var nMeas=ms.length, hasCol=cf.length>0, showTot=state.totals!==false;
-    var leaf=cKeys.slice(); // leaf column groups
-    var html='<div class="table-scroll"><table class="pivot"><thead>';
+    var nMeas=ms.length, hasCol=cf.length>0, showTot=cur().totals!==false;
 
-    var cornerCols=Math.max(rf.length,1);
+    // No measures: render a plain list of the distinct Row-field combinations.
+    if(nMeas===0){
+      if(!rf.length){ el.innerHTML='<div class="empty-note">Add a Row field to list values, or a measure.</div>'; return; }
+      var h0='<div class="table-scroll"><table class="pivot"><thead><tr>';
+      rf.forEach(function(f){ h0+='<th class="rowhdr">'+esc(f)+'</th>'; });
+      h0+='</tr></thead><tbody>';
+      rKeys.forEach(function(rk){ h0+='<tr>'; P.rkMeta[rk].forEach(function(v){ h0+='<td class="rowlbl">'+esc(dispLabel(v))+'</td>'; }); h0+='</tr>'; });
+      h0+='</tbody></table></div>';
+      el.innerHTML=h0;
+      return;
+    }
+    var leaf=cKeys.slice(); // leaf column groups
+    var collapsible=cur().collapsible===true && rf.length>=1; // pivot-style stepped, expand/collapse rows
+    var html='<div class="table-scroll"><table class="pivot'+(collapsible?" stepped":"")+'"><thead>';
+
+    var cornerCols=collapsible?1:Math.max(rf.length,1);
     var headerRows=cf.length + 1; // one row per col field level + measure row
     var cornerTxt=(rf.length? esc(rf.join(" / ")):"")+rowArrow();
 
@@ -365,7 +710,7 @@
     if(hasCol && showTot){ ms.forEach(function(m){ html+='<th class="gtot msr" data-sort="'+m.id+'" title="Sort rows by this measure">'+esc(measureLabel(m))+msrArrow(m)+'</th>'; }); }
     html+='</tr></thead><tbody>';
 
-    var subOn = state.subtotals===true && rf.length>=2;
+    var subOn = cur().subtotals===true && rf.length>=2;
     var pcell={}, pall={};  // prefix maps for subtotals: pcell[prefix][colKey]=rows, pall[prefix]=rows
 
     // value <td>s for a detail row (by rk) or a subtotal row (by prefix pk)
@@ -377,6 +722,35 @@
         if(showTot) ms.forEach(function(m){ out+='<td class="val gtot">'+fmt(measureValue(m,totGrp()))+'</td>'; });
       } else { ms.forEach(function(m){ out+='<td class="val">'+fmt(measureValue(m,totGrp()))+'</td>'; }); }
       return out;
+    }
+
+    if(collapsible){
+      // build prefix maps for ALL levels 1..rf.length (each node shows its group aggregate)
+      P.filtered.forEach(function(row){
+        var rt=[]; for(var c=0;c<rf.length;c++){ var v=row[fieldIndex[rf[c]]]; rt.push((v===null||v===undefined)?"":String(v)); }
+        var ct=[]; for(var c2=0;c2<cf.length;c2++){ var v2=row[fieldIndex[cf[c2]]]; ct.push((v2===null||v2===undefined)?"":String(v2)); }
+        var ck=ct.join(SEP);
+        for(var L=1; L<=rf.length; L++){ var pk=rt.slice(0,L).join(SEP); var o=pcell[pk]||(pcell[pk]={}); (o[ck]||(o[ck]=[])).push(row); (pall[pk]||(pall[pk]=[])).push(row); }
+      });
+      var ordered=rKeys.slice().sort(function(a,b){ return cmpTuple(P.rkMeta[a],P.rkMeta[b]); });
+      var root={children:{}, order:[]};
+      ordered.forEach(function(rk){ var t=P.rkMeta[rk], node=root; for(var L=0;L<rf.length;L++){ var key=t[L]; if(!node.children[key]){ node.children[key]={children:{},order:[],tuple:t.slice(0,L+1)}; node.order.push(key); } node=node.children[key]; } });
+      var coll=cur().collapsed||{};
+      (function emit(node, level){
+        node.order.forEach(function(key){
+          var ch=node.children[key], pk=ch.tuple.join(SEP), isLeaf=(level===rf.length-1), hasKids=!isLeaf && ch.order.length>0, collapsed=!!coll[pk];
+          var tog = hasKids ? '<span class="ctoggle" data-prefix="'+esc(pk)+'">'+(collapsed?"▸":"▾")+'</span>' : '<span class="ctoggle-sp"></span>';
+          html+='<tr'+(hasKids?' class="grp-row"':'')+'><td class="rowlbl" style="padding-left:'+(8+level*16)+'px">'+tog+esc(dispLabel(ch.tuple[level]))+'</td>'+valCells("subtotal", null, pk)+'</tr>';
+          if(hasKids && !collapsed) emit(ch, level+1);
+        });
+      })(root, 0);
+      if(showTot){
+        html+='<tr class="grand"><td class="rowhdr">Grand Total</td>';
+        if(hasCol){ cKeys.forEach(function(ck){ ms.forEach(function(m){ html+='<td class="val">'+fmt(measureValue(m,P.colGrp[ck]||[]))+'</td>'; }); }); ms.forEach(function(m){ html+='<td class="val gtot">'+fmt(measureValue(m,P.filtered))+'</td>'; }); }
+        else { ms.forEach(function(m){ html+='<td class="val">'+fmt(measureValue(m,P.filtered))+'</td>'; }); }
+        html+='</tr>';
+      }
+      html+='</tbody></table></div>'; el.innerHTML=html; return;
     }
 
     if(!subOn){
@@ -455,21 +829,24 @@
       html+='</tr>';
     }
     html+='</tbody></table></div>';
-    $id("result").innerHTML=html;
+    el.innerHTML=html;
   }
 
   // ---------------- render chart ----------------
   function blankify(v){ return dispLabel(v); }
   var HIER = { pie:1, treemap:1, sunburst:1, icicle:1 };
 
-  function setHierNote(txt){ var n=$id("hiernote"); if(txt){ n.style.display="inline"; n.textContent=txt; } else { n.style.display="none"; } }
+  function setHierNote(txt){ if(!IS_BUILDER_RENDER) return; var n=$id("hiernote"); if(txt){ n.style.display="inline"; n.textContent=txt; } else { n.style.display="none"; } }
+  function chartBox(el){ el.innerHTML='<div class="chartbox" style="width:100%;height:100%;"></div>'; return el.firstChild; }
+  function chartH(el){ return IS_BUILDER_RENDER ? 480 : Math.max(140, el.clientHeight||300); }
 
-  function renderChart(P){
-    if(HIER[state.chartType]) return renderHier(P);
+  function renderChart(P, el){
+    if(HIER[cur().chartType]) return renderHier(P, el);
     setHierNote("");
-    $id("result").innerHTML='<div id="chart"></div>';
+    var cd=chartBox(el);
     var ms=P.ms, rf=P.rf, cf=P.cf, rKeys=P.rKeys, cKeys=P.cKeys;
     var x=rKeys.map(function(rk){ return P.rkMeta[rk].map(blankify).join(" / ")||"(all)"; });
+    var rawX=rKeys.map(function(rk){ var t=P.rkMeta[rk]; return (t&&t[0]!==undefined)?t[0]:""; }); // raw 1st row-field value per point, for click-to-filter
     var series=[];
     var groups = cf.length? cKeys : [null];
     groups.forEach(function(ck){
@@ -480,28 +857,30 @@
       });
     });
 
-    var opt=state.chartOpts||{}, ct=state.chartType, traces, hasY2=false;
-    var lbl = opt.labels ? { textposition:"auto", texttemplate:"%{y}" } : {};
-    if(ct==="line"||ct==="area"){ traces=series.map(function(s){ return { type:"scatter", mode:"lines+markers", name:s.name, x:s.x, y:s.y, fill: ct==="area"?"tozeroy":undefined, stackgroup: ct==="area"?"one":undefined, text: opt.labels? s.y.map(fmt):undefined, texttemplate: opt.labels?"%{text}":undefined, textposition:"top center" }; }); }
-    else if(ct==="hbar"){ traces=series.map(function(s){ return { type:"bar", orientation:"h", name:s.name, y:s.x, x:s.y, text: opt.labels? s.y.map(fmt):undefined, texttemplate: opt.labels?"%{text}":undefined, textposition:"auto" }; }); }
+    var opt=cur().chartOpts||{}, ct=cur().chartType, traces, hasY2=false;
+    function ltext(s){ return opt.labels ? s.y.map(fmt) : undefined; }                       // data-label values
+    function ltmpl(s){ return opt.labels ? ((opt.labelSeries ? (s.name+": ") : "")+"%{text}") : undefined; } // optionally prefix series name
+    if(ct==="line"||ct==="area"){ traces=series.map(function(s){ return { type:"scatter", mode:"lines+markers", name:s.name, x:s.x, y:s.y, customdata:rawX, fill: ct==="area"?"tozeroy":undefined, stackgroup: ct==="area"?"one":undefined, text:ltext(s), texttemplate:ltmpl(s), textposition:"top center" }; }); }
+    else if(ct==="hbar"){ traces=series.map(function(s){ return { type:"bar", orientation:"h", name:s.name, y:s.x, x:s.y, customdata:rawX, text:ltext(s), texttemplate:ltmpl(s), textposition:"auto" }; }); }
     else if(ct==="combo"){
       traces=series.map(function(s){
         var cfg=(opt.combo&&opt.combo[s.mid])||{}; var typ=cfg.type==="line"?"line":"bar"; var ax=cfg.axis==="y2"?"y2":"y"; if(ax==="y2") hasY2=true;
-        if(typ==="line") return { type:"scatter", mode:"lines+markers", name:s.name, x:s.x, y:s.y, yaxis:ax, text: opt.labels? s.y.map(fmt):undefined, texttemplate: opt.labels?"%{text}":undefined, textposition:"top center" };
-        return { type:"bar", name:s.name, x:s.x, y:s.y, yaxis:ax, text: opt.labels? s.y.map(fmt):undefined, texttemplate: opt.labels?"%{text}":undefined, textposition:"auto" };
+        if(typ==="line") return { type:"scatter", mode:"lines+markers", name:s.name, x:s.x, y:s.y, yaxis:ax, customdata:rawX, text:ltext(s), texttemplate:ltmpl(s), textposition:"top center" };
+        return { type:"bar", name:s.name, x:s.x, y:s.y, yaxis:ax, customdata:rawX, text:ltext(s), texttemplate:ltmpl(s), textposition:"auto" };
       });
     }
-    else { traces=series.map(function(s){ return { type:"bar", name:s.name, x:s.x, y:s.y, text: opt.labels? s.y.map(fmt):undefined, texttemplate: opt.labels?"%{text}":undefined, textposition:"auto" }; }); }
+    else { traces=series.map(function(s){ return { type:"bar", name:s.name, x:s.x, y:s.y, customdata:rawX, text:ltext(s), texttemplate:ltmpl(s), textposition:"auto" }; }); }
 
-    var layout={ barmode: ct==="stacked"?"stack":"group", margin:{t:20,r:20,b:90,l:70}, showlegend: opt.legend!==false, legend:{orientation:"h",y:-0.25}, height:480, xaxis:{automargin:true}, yaxis:{automargin:true} };
-    if(hasY2) layout.yaxis2={ overlaying:"y", side:"right", automargin:true };
-    Plotly.newPlot("chart", traces, layout, {responsive:true, displayModeBar:true});
+    var hmode = (ct==="hbar") ? "y unified" : "x unified";  // unified = one tooltip listing every series for the category
+    var layout=$.extend({}, PLOT_BASE, { barmode: ct==="stacked"?"stack":"group", hovermode:hmode, margin:{t:16,r:16,b:90,l:64}, showlegend: opt.legend!==false, legend:{orientation:"h",y:-0.25}, height:chartH(el), xaxis:$.extend({},AXIS), yaxis:$.extend({},AXIS) });
+    if(hasY2) layout.yaxis2=$.extend({}, AXIS, { overlaying:"y", side:"right", gridcolor:"rgba(0,0,0,0)" });
+    Plotly.newPlot(cd, traces, layout, {responsive:true, displayModeBar:IS_BUILDER_RENDER});
   }
 
-  function renderHier(P){
-    $id("result").innerHTML='<div id="chart"></div>';
-    var ct=state.chartType, m=P.ms[0], rf=P.rf;
-    if(!m){ $id("result").innerHTML='<div class="empty-note">Add a measure to draw a '+ct+'.</div>'; return; }
+  function renderHier(P, el){
+    var cd=chartBox(el);
+    var ct=cur().chartType, m=P.ms[0], rf=P.rf;
+    if(!m){ el.innerHTML='<div class="empty-note">Add a measure to draw a '+ct+'.</div>'; return; }
     // additive measures (Sum/Count) make a consistent hierarchy where a parent = sum of children.
     var additive = m.kind==="base" && (m.agg==="Sum"||m.agg==="Count"||m.agg==="Count Numbers");
     var extra=[]; if(P.ms.length>1) extra.push("only the 1st measure ("+esc(measureLabel(m))+")"); if(P.cf.length) extra.push("Columns ignored");
@@ -509,10 +888,11 @@
     setHierNote(extra.length? "Note: "+extra.join("; ")+"." : "");
 
     if(ct==="pie"){
-      var labels=[], values=[];
-      P.rKeys.forEach(function(rk){ var v=measureValue(m, P.rowGrp[rk]||[]); if(v!==null && isFinite(v) && v>0){ labels.push(P.rkMeta[rk].map(blankify).join(" / ")||"(all)"); values.push(v); } });
-      Plotly.newPlot("chart", [{ type:"pie", labels:labels, values:values, textinfo:"label+percent", hovertemplate:"%{label}<br>%{value} (%{percent})<extra></extra>" }],
-        { margin:{t:20,r:20,b:20,l:20}, height:480 }, {responsive:true, displayModeBar:true});
+      var labels=[], values=[], raws=[];
+      P.rKeys.forEach(function(rk){ var v=measureValue(m, P.rowGrp[rk]||[]); if(v!==null && isFinite(v) && v>0){ labels.push(P.rkMeta[rk].map(blankify).join(" / ")||"(all)"); values.push(v); raws.push(P.rkMeta[rk]); } });
+      cd._xraw=raws; // raw row-tuples aligned to pie slices, for click-to-filter
+      Plotly.newPlot(cd, [{ type:"pie", labels:labels, values:values, marker:{line:{color:"#fff",width:1.5}}, textinfo:"label+percent", hovertemplate:"%{label}<br>%{value} (%{percent})<extra></extra>" }],
+        $.extend({}, PLOT_BASE, { margin:{t:16,r:16,b:16,l:16}, height:chartH(el) }), {responsive:true, displayModeBar:IS_BUILDER_RENDER});
       return;
     }
 
@@ -536,9 +916,24 @@
         pushNode(key, blankify(parts[depth-1]), depth>1? parts.slice(0,depth-1).join(SEP):"", groups[key], depth===rf.length); });
     }
     var tt=(ct==="treemap"||ct==="icicle") ? "%{label}<br>%{customdata}" : "%{label}";
-    Plotly.newPlot("chart", [{ type:ct, ids:ids, labels:labels, parents:parents, values:sizes, customdata:reals, branchvalues:"remainder",
-      texttemplate:tt, hovertemplate:"%{label}<br>"+esc(measureLabel(m))+": %{customdata}<extra></extra>" }],
-      { margin:{t:20,r:20,b:20,l:20}, height:480 }, {responsive:true, displayModeBar:true});
+    Plotly.newPlot(cd, [{ type:ct, ids:ids, labels:labels, parents:parents, values:sizes, customdata:reals, branchvalues:"remainder",
+      marker:{line:{color:"#fff",width:1.5}}, texttemplate:tt, hovertemplate:"%{label}<br>"+esc(measureLabel(m))+": %{customdata}<extra></extra>" }],
+      $.extend({}, PLOT_BASE, { margin:{t:16,r:16,b:16,l:16}, height:chartH(el) }), {responsive:true, displayModeBar:IS_BUILDER_RENDER});
+  }
+
+  // KPI tile: one measure as a big number (grand total over the filtered rows).
+  function renderKPI(P, el){
+    var ms=P.ms;
+    if(!ms.length){ el.innerHTML='<div class="empty-note">Add a measure for a KPI.</div>'; return; }
+    var color=(cur().chartOpts&&cur().chartOpts.kpiColor)||"#003049";
+    var main=ms[0], mv=measureValue(main, P.filtered);
+    var html='<div class="kpi"><div class="kpi-val" style="color:'+esc(color)+'">'+(mv===null?"—":fmt(mv))+'</div><div class="kpi-lbl">'+esc(measureLabel(main))+'</div>';
+    if(ms.length>1){
+      html+='<div class="kpi-sub">';
+      for(var i=1;i<ms.length;i++){ var v=measureValue(ms[i],P.filtered); html+='<span class="kpi-sub-item"><b>'+(v===null?"—":fmt(v))+'</b> '+esc(measureLabel(ms[i]))+'</span>'; }
+      html+='</div>';
+    }
+    el.innerHTML=html+'</div>';
   }
 
   // ---------------- render result ----------------
@@ -546,14 +941,17 @@
   function rerender(){
     saveState(); recordHistory();
     if(state.view!=="chart") setHierNote("");
-    if(!rows.length){ emptyNote("⏳","No data loaded yet.","Check the endpoint URL and press Refresh data."); return; }
-    if(state.values.length===0){ emptyNote("Σ","No measures yet.","Add a field to <b>Values</b> — use the <b>Σ</b> button next to a field, or drag one in."); return; }
+    if(!rows.length){ emptyNote("⏳","No data loaded yet.","Check the endpoint URL and press Refresh data."); setStatus("No data loaded.", false); return; }
+    if(state.values.length===0 && !(state.view==="table" && state.rows.length)){ emptyNote("Σ","No measures yet.","Add a measure (Σ) — or, for a Table, add a field to <b>Rows</b> to list distinct values."); setStatus("<b>"+rows.length.toLocaleString()+"</b> rows loaded × <b>"+headers.length+"</b> fields. Add a measure or (for a table) a Row field.", false); return; }
     var t0=Date.now();
-    var P=compute();
-    if(!P.filtered.length){ emptyNote("⛃","No rows match the current filters.","Loosen or clear a filter in the <b>Filters</b> area."); setStatus("0 of "+rows.length.toLocaleString()+" rows match the current filters.", false); return; }
-    if(state.view==="chart") renderChart(P); else renderTable(P);
-    var shown=P.filtered.length, tot=rows.length;
-    setStatus((shown<tot? shown.toLocaleString()+" of "+tot.toLocaleString()+" rows (filtered)" : tot.toLocaleString()+" rows")+" × <b>"+headers.length+"</b> fields. "+P.rKeys.length+" row × "+(P.cKeys.length||1)+" col groups × "+state.values.length+" measures. Computed in "+(Date.now()-t0)+"ms.", false);
+    try {
+      var P=compute();
+      if(!P.filtered.length){ emptyNote("⛃","No rows match the current filters.","Loosen or clear a filter in the <b>Filters</b> area."); setStatus("0 of "+rows.length.toLocaleString()+" rows match the current filters.", false); return; }
+      var resEl=$id("result");
+      if(state.view==="kpi") renderKPI(P, resEl); else if(state.view==="chart") renderChart(P, resEl); else renderTable(P, resEl);
+      var shown=P.filtered.length, tot=rows.length;
+      setStatus((shown<tot? shown.toLocaleString()+" of "+tot.toLocaleString()+" rows (filtered)" : tot.toLocaleString()+" rows")+" × <b>"+headers.length+"</b> fields. "+P.rKeys.length+" row × "+(P.cKeys.length||1)+" col groups × "+state.values.length+" measures. Computed in "+(Date.now()-t0)+"ms.", false);
+    } catch(e){ emptyNote("⚠","Measure error", esc(String(e&&e.message||e))); setStatus("⚠ "+esc(String(e&&e.message||e)), true); }
   }
 
   // ---------------- buckets UI ----------------
@@ -563,12 +961,36 @@
       html+='<div class="field-row" data-field="'+esc(h)+'"><span class="fname" title="'+esc(h)+'">'+esc(h)+'</span>'+
         '<span class="adds"><button data-add="rows">R</button><button data-add="cols">C</button><button data-add="values">Σ</button><button data-add="filters">⏚</button></span></div>';
     });
+    var sm=state.savedMeasures||[];
+    if(sm.length){
+      html+='<div class="fields-sub">Measures</div>';
+      sm.forEach(function(m){
+        html+='<div class="field-row measure" data-sm-id="'+m.id+'" data-field="'+esc(m.label)+'"><span class="fname" title="'+esc(m.label)+'"><span class="badge" title="Saved (linked) measure">🔗</span>'+esc(m.label)+'</span>'+
+          '<span class="adds"><button data-smadd title="Add to Values">Σ</button><button data-smedit title="Edit measure">✎</button><button data-smdel title="Remove from list">✕</button></span></div>';
+      });
+    }
     $id("fields").innerHTML=html;
+  }
+
+  // Summarize a filter: how many values are selected, and the single value if exactly one.
+  function filterInfo(field, exclArr){
+    var all=distinct[field]||[], ex=exclArr||[], total=all.length, inc=total-ex.length, one=null;
+    if(ex.length && inc===1){ var s={}; ex.forEach(function(v){ s[v]=1; }); for(var i=0;i<all.length;i++){ if(!s[all[i]]){ one=all[i]; break; } } }
+    return { total:total, exCount:ex.length, inc:inc, one:one, active:ex.length>0 };
+  }
+  function filterLabel(field, exclArr){
+    var fi=filterInfo(field, exclArr);
+    if(fi.one!==null) return esc(field)+': '+esc(dispLabel(fi.one));
+    if(fi.active) return esc(field)+' ('+(fi.inc<=0?'none':fi.inc+' selected')+')';
+    return esc(field);
   }
 
   function chipHtml(bucket, item){
     if(bucket==="values"){
-      var tools='<span class="ic" data-act="edit" title="'+(item.kind==="calc"?"Edit":"Rename")+'">✎</span><span class="ic" data-act="dup" title="Duplicate">⧉</span><span class="x" data-act="remove" title="Remove">✕</span>';
+      var tools='<span class="ic" data-act="edit" title="'+(item.kind==="base"?"Rename":"Edit")+'">✎</span><span class="ic" data-act="dup" title="Duplicate">⧉</span><span class="x" data-act="remove" title="Remove">✕</span>';
+      if(item.kind==="ref"){
+        return '<li class="chip calc" data-id="'+item.id+'"><span class="badge" title="Linked to a saved measure (live)">🔗</span><span class="cname" title="'+esc(measureLabel(item))+'">'+esc(measureLabel(item))+'</span>'+tools+'</li>';
+      }
       if(item.kind==="calc"){
         return '<li class="chip calc" data-id="'+item.id+'"><span class="badge">fx</span><span class="cname" title="'+esc(measureLabel(item))+'">'+esc(measureLabel(item))+'</span>'+tools+'</li>';
       }
@@ -577,8 +999,8 @@
       return '<li class="chip" data-id="'+item.id+'"><span class="cname" title="'+nm+'">'+nm+'</span><select data-act="agg">'+opts+'</select>'+tools+'</li>';
     }
     if(bucket==="filters"){
-      var n=(state.exclusions[item]||[]).length;
-      return '<li class="chip" data-field="'+esc(item)+'"><span class="cname" title="'+esc(item)+'">'+esc(item)+'</span><button class="fbtn" data-act="filter">filter'+(n?" ("+n+")":"")+'</button><span class="x" data-act="remove">✕</span></li>';
+      var lbl=filterLabel(item, state.exclusions[item]);
+      return '<li class="chip" data-field="'+esc(item)+'"><span class="cname" title="'+lbl+'">'+lbl+'</span><button class="fbtn" data-act="filter">filter</button><span class="x" data-act="remove">✕</span></li>';
     }
     return '<li class="chip" data-field="'+esc(item)+'"><span class="cname" title="'+esc(item)+'">'+esc(item)+'</span><span class="x" data-act="remove">✕</span></li>';
   }
@@ -602,6 +1024,20 @@
 
   // delegated events on buckets
   $(document).on("click", ".field-row button[data-add]", function(){ addField($(this).closest(".field-row").data("field"), $(this).data("add")); });
+  // saved-measure (library) actions
+  function findSaved(id){ var sm=state.savedMeasures||[]; for(var i=0;i<sm.length;i++){ if(String(sm[i].id)===String(id)) return sm[i]; } return null; }
+  function clearCalcCaches(){ (state.values||[]).forEach(function(m){ if(m.kind==="calc"||m.kind==="ref") delete m._fn; }); (state.savedMeasures||[]).forEach(function(sm){ delete sm._fn; }); } // saved-measure edits change what referencing measures resolve to
+  // Renaming a saved measure rewrites every [old name] reference across all expressions so references survive renames.
+  function renameMeasureRefs(oldL, newL){
+    if(!oldL || oldL===newL) return;
+    var find="["+oldL+"]", repl="["+newL+"]";
+    function fixArr(arr){ (arr||[]).forEach(function(m){ if(m && typeof m.expr==="string" && m.expr.indexOf(find)>=0){ m.expr=m.expr.split(find).join(repl); delete m._fn; } }); }
+    fixArr(state.savedMeasures); fixArr(state.values);
+    ((state.dash&&state.dash.tabs)||[]).forEach(function(tab){ (tab.tiles||[]).forEach(function(t){ if(t.cfg) fixArr(t.cfg.values); }); });
+  }
+  $(document).on("click", ".field-row.measure button[data-smadd]", function(){ var m=findSaved($(this).closest(".field-row").data("sm-id")); if(!m) return; state.values.push({ id:"m"+(uid++), kind:"ref", smId:m.id }); renderBuckets(); rerender(); });
+  $(document).on("click", ".field-row.measure button[data-smedit]", function(){ var m=findSaved($(this).closest(".field-row").data("sm-id")); if(m) openSavedMeasureDialog(m); });
+  $(document).on("click", ".field-row.measure button[data-smdel]", function(){ var m=findSaved($(this).closest(".field-row").data("sm-id")); if(!m) return; if(!window.confirm('Remove saved measure "'+m.label+'"?\n\nCharts/tables that use it will show an error until you remove or repoint them.')) return; state.savedMeasures=state.savedMeasures.filter(function(x){return x!==m;}); clearCalcCaches(); saveState(); renderFields(); rerender(); });
   $id("field-search").addEventListener("input", function(){ var q=this.value.toLowerCase(); $("#fields .field-row").each(function(){ var f=String(this.getAttribute("data-field")||"").toLowerCase(); this.style.display = f.indexOf(q)>=0 ? "" : "none"; }); });
   $(document).on("click", ".bucket-list .x[data-act=remove]", function(){
     var $li=$(this).closest(".chip"), $ul=$li.closest(".bucket-list"), bucket=$ul.data("bucket");
@@ -619,13 +1055,21 @@
   function findMeasure(id){ for(var i=0;i<state.values.length;i++){ if(String(state.values[i].id)===String(id)) return state.values[i]; } return null; }
   $(document).on("click", "#b-values .ic[data-act=edit]", function(){
     var m=findMeasure($(this).closest(".chip").data("id")); if(!m) return;
-    if(m.kind==="calc"){ openCalcDialog(m); }
+    if(m.kind==="ref"||m.kind==="calc"){ openCalcDialog(m); }
     else { var cur=m.label||(m.agg+" of "+m.field); var name=window.prompt("Measure name (blank = default):", cur); if(name===null) return; name=name.trim(); if(!name||name===(m.agg+" of "+m.field)) delete m.label; else m.label=name; renderBuckets(); rerender(); }
   });
   $(document).on("click", "#b-values .ic[data-act=dup]", function(){
     var m=findMeasure($(this).closest(".chip").data("id")); if(!m) return;
     var copy=$.extend({}, m); delete copy._fn; copy.id="m"+(uid++);
     var idx=state.values.indexOf(m); state.values.splice(idx+1,0,copy);
+    renderBuckets(); rerender();
+  });
+  // double-click a measure's name to rename it for THIS visual only (display override; keeps 🔗 links intact)
+  $(document).on("dblclick", "#b-values .chip .cname", function(){
+    var m=findMeasure($(this).closest(".chip").data("id")); if(!m) return;
+    var name=window.prompt("Display name for this visual (blank = reset to default):", measureLabel(m));
+    if(name===null) return; name=name.trim();
+    if(name) m.label=name; else delete m.label;
     renderBuckets(); rerender();
   });
 
@@ -650,39 +1094,137 @@
   }
 
   // ---------------- filter popup ----------------
-  var $flt=$("#flt"), fstate=null;
-  function openFilter(field, anchor){
+  var $flt=$("#flt"), fstate=null, fltTarget=null;
+  var MONTHS=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  function pad2(n){ return (n<10?"0":"")+n; }
+  function parseDateVal(v){
+    if(v===""||v===null||v===undefined) return null;
+    var iso=/^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2})(?::(\d{2}))?)?/.exec(v);
+    if(iso) return Date.UTC(+iso[1],+iso[2]-1,+iso[3],+(iso[4]||0),+(iso[5]||0),+(iso[6]||0));
+    var dmy=/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})(?:[ T](\d{1,2}):(\d{2}))?/.exec(v); // day-month-year
+    if(dmy) return Date.UTC(+dmy[3],+dmy[2]-1,+dmy[1],+(dmy[4]||0),+(dmy[5]||0));
+    return null;
+  }
+  function isDateField(vals){ var n=0,ok=0; for(var i=0;i<vals.length && i<300;i++){ var v=vals[i]; if(v==="") continue; n++; if(parseDateVal(v)!==null) ok++; } return n>0 && ok/n>0.7; }
+
+  // opts (optional): { src: exclusionsObject, onApply: fn }. Defaults to the builder's state.exclusions.
+  function openFilter(field, anchor, opts){
     if(!distinct[field]) return;
-    fstate={ field:field, excl:new Set(state.exclusions[field]||[]) };
+    fltTarget = opts || { src: state.exclusions, onApply: function(){ renderBuckets(); rerender(); } };
+    var vals=distinct[field]||[], isDate=isDateField(vals), ts={}, sorted=vals;
+    if(isDate){
+      vals.forEach(function(v){ ts[v]=parseDateVal(v); });
+      sorted=vals.slice().sort(function(a,b){ var ta=ts[a],tb=ts[b]; if(ta===null&&tb===null) return a.localeCompare(b); if(ta===null) return 1; if(tb===null) return -1; return ta-tb; });
+    }
+    // build Year -> Month -> [values] tree from the full (chronological) set
+    var tree=null;
+    if(isDate){
+      tree={ yorder:[], years:{} };
+      sorted.forEach(function(v){
+        var t=ts[v], yk, mk, mlabel;
+        if(t===null){ yk="(no date)"; mk="(no date)"; mlabel="(no date)"; }
+        else { var d=new Date(t); yk=String(d.getUTCFullYear()); mk=yk+"-"+pad2(d.getUTCMonth()+1); mlabel=MONTHS[d.getUTCMonth()]+" "+yk; }
+        var Y=tree.years[yk]; if(!Y){ Y=tree.years[yk]={morder:[], months:{}, vals:[]}; tree.yorder.push(yk); }
+        Y.vals.push(v);
+        var M=Y.months[mk]; if(!M){ M=Y.months[mk]={label:mlabel, vals:[]}; Y.morder.push(mk); }
+        M.vals.push(v);
+      });
+    }
+    fstate={ field:field, excl:new Set((fltTarget.src[field])||[]), isDate:isDate, sorted:sorted, tree:tree, open:new Set() };
     $flt.find(".t").text(field); $flt.find(".s").val(""); fltList("");
     var r=anchor.getBoundingClientRect();
-    $flt.css({ top:Math.max(8,Math.min(r.bottom+4, window.innerHeight-360))+"px", left:Math.max(8,Math.min(r.left, window.innerWidth-296))+"px", display:"block" });
+    $flt.css({ top:Math.max(8,Math.min(r.bottom+4, window.innerHeight-380))+"px", left:Math.max(8,Math.min(r.left, window.innerWidth-296))+"px", display:"block" });
     $flt.find(".s").focus();
   }
+
+  function selectOnly(keep){ var k=new Set(keep); fstate.excl=new Set(); (distinct[fstate.field]||[]).forEach(function(v){ if(!k.has(v)) fstate.excl.add(v); }); fltList($flt.find(".s").val()); }
+  function grpState(vals){ var inc=0; for(var i=0;i<vals.length;i++){ if(!fstate.excl.has(vals[i])) inc++; } return inc===0?"none":(inc===vals.length?"all":"some"); }
+  function toggleGroup(vals){ var st=grpState(vals); if(st==="all"){ vals.forEach(function(v){ fstate.excl.add(v); }); } else { vals.forEach(function(v){ fstate.excl.delete(v); }); } }
+
+  function leafRow(v, cls){
+    var row=document.createElement("div"); row.className="frow"+(cls?(" "+cls):"");
+    var lab=document.createElement("label");
+    var cb=document.createElement("input"); cb.type="checkbox"; cb.checked=!fstate.excl.has(v);
+    cb.onchange=function(){ if(cb.checked) fstate.excl.delete(v); else fstate.excl.add(v); };
+    var sp=document.createElement("span"); sp.textContent=dispLabel(v); sp.title=sp.textContent;
+    lab.appendChild(cb); lab.appendChild(sp);
+    var only=document.createElement("a"); only.className="only"; only.textContent="only"; only.title="Select only this"; only.onclick=function(e){ e.preventDefault(); selectOnly([v]); };
+    row.appendChild(lab); row.appendChild(only); return row;
+  }
+  function groupRow(label, vals, key, expandable, cls){
+    var row=document.createElement("div"); row.className="grp"+(cls?(" "+cls):"");
+    var tog=document.createElement("span"); tog.className="tog"; tog.textContent= expandable ? (fstate.open.has(key)?"▾":"▸") : ""; if(expandable) tog.onclick=function(){ if(fstate.open.has(key)) fstate.open.delete(key); else fstate.open.add(key); fltList($flt.find(".s").val()); };
+    var lab=document.createElement("label");
+    var cb=document.createElement("input"); cb.type="checkbox"; var st=grpState(vals); cb.checked=(st==="all"); cb.indeterminate=(st==="some");
+    cb.onchange=function(){ toggleGroup(vals); fltList($flt.find(".s").val()); };
+    var sp=document.createElement("span"); sp.textContent=label; sp.title=label;
+    lab.appendChild(cb); lab.appendChild(sp);
+    var only=document.createElement("a"); only.className="only"; only.textContent="only"; only.title="Select only this group"; only.onclick=function(e){ e.preventDefault(); selectOnly(vals); };
+    row.appendChild(tog); row.appendChild(lab); row.appendChild(only); return row;
+  }
+
   function fltList(q){
-    var $l=$flt.find(".list").empty(), all=distinct[fstate.field]||[]; q=(q||"").toLowerCase();
-    var m=q? all.filter(function(v){return v.toLowerCase().indexOf(q)>=0;}) : all, CAP=200, show=m.slice(0,CAP), frag=document.createDocumentFragment();
-    if(!show.length) $l.html('<div style="color:#888;font-style:italic;padding:8px 0;">No matching values.</div>');
-    else show.forEach(function(v){ var lab=document.createElement("label"); var cb=document.createElement("input"); cb.type="checkbox"; cb.checked=!fstate.excl.has(v); cb.onchange=function(){ if(cb.checked) fstate.excl.delete(v); else fstate.excl.add(v); }; var sp=document.createElement("span"); sp.textContent=v===""?"(blank)":v; sp.title=sp.textContent; lab.appendChild(cb); lab.appendChild(sp); frag.appendChild(lab); });
-    $l.append(frag);
+    var $l=$flt.find(".list").empty(); q=(q||"").toLowerCase();
+    var match=function(v){ return !q || dispLabel(v).toLowerCase().indexOf(q)>=0 || v.toLowerCase().indexOf(q)>=0; };
+    var frag=document.createDocumentFragment(), shownCount=0;
+
+    if(fstate.isDate){
+      var anyOpen=!!q; // searching auto-expands
+      var total=0, matched=0;
+      fstate.tree.yorder.forEach(function(yk){
+        var Y=fstate.tree.years[yk]; total+=Y.vals.length;
+        var ymHas=Y.vals.some(match); if(!ymHas) return;
+        frag.appendChild(groupRow(yk, Y.vals, "y:"+yk, true));
+        if(anyOpen || fstate.open.has("y:"+yk)){
+          Y.morder.forEach(function(mk){
+            var M=Y.months[mk]; if(!M.vals.some(match)) return;
+            frag.appendChild(groupRow(M.label, M.vals, "m:"+mk, true, "mon"));
+            if(anyOpen || fstate.open.has("m:"+mk)){
+              M.vals.forEach(function(v){ if(match(v)){ frag.appendChild(leafRow(v,"lf")); matched++; if(matched<=400) shownCount++; } });
+            }
+          });
+        }
+      });
+      fstate.sorted.forEach(function(v){ if(match(v)) matched++; });
+      if(!frag.childNodes.length) $l.html('<div style="color:#888;font-style:italic;padding:8px 0;">No matching dates.</div>'); else $l.append(frag);
+      $flt.find(".cnt").text(total.toLocaleString()+" dates"+(q? " · "+matched.toLocaleString()+" match":""));
+      return;
+    }
+
+    var all=fstate.sorted, m=all.filter(match), CAP=200, show=m.slice(0,CAP);
+    if(!show.length){ $l.html('<div style="color:#888;font-style:italic;padding:8px 0;">No matching values.</div>'); }
+    else { show.forEach(function(v){ frag.appendChild(leafRow(v)); }); $l.append(frag); }
     $flt.find(".cnt").text(m.length.toLocaleString()+" value"+(m.length===1?"":"s")+(m.length>CAP?" (first "+CAP+" shown)":""));
   }
   $flt.find(".s").on("input", function(){ fltList(this.value); });
   $flt.find(".all").on("click", function(){ fstate.excl.clear(); fltList($flt.find(".s").val()); });
   $flt.find(".none").on("click", function(){ (distinct[fstate.field]||[]).forEach(function(v){ fstate.excl.add(v); }); fltList($flt.find(".s").val()); });
   $flt.find(".cancel").on("click", function(){ $flt.hide(); fstate=null; });
-  $flt.find(".apply").on("click", function(){ var a=Array.from(fstate.excl); if(a.length) state.exclusions[fstate.field]=a; else delete state.exclusions[fstate.field]; $flt.hide(); fstate=null; renderBuckets(); rerender(); });
+  $flt.find(".apply").on("click", function(){ var a=Array.from(fstate.excl); if(a.length) fltTarget.src[fstate.field]=a; else delete fltTarget.src[fstate.field]; var cb=fltTarget.onApply; $flt.hide(); fstate=null; if(cb) cb(); });
   document.addEventListener("mousedown", function(e){ if(fstate && !e.target.closest("#flt") && !e.target.closest("[data-act=filter]")) { $flt.hide(); fstate=null; } });
 
   // ---------------- calc dialog ----------------
-  var $calc=$("#calc"), calcEditId=null;
+  var $calc=$("#calc"), calcEditId=null, savedEditId=null;
+  function addToLibrary(label, expr){ if(!state.savedMeasures) state.savedMeasures=[]; var sm={ id:"sm"+(smuid++), label:label, expr:expr }; state.savedMeasures.push(sm); return sm; }
   function openCalcDialog(m){
-    calcEditId = m ? m.id : null;
-    $id("calc-name").value = m ? (m.label||"") : "";
-    $id("calc-expr").value = m ? (m.expr||"") : "";
+    calcEditId = m ? m.id : null; savedEditId=null;
+    var label="", expr="", isRef=(m && m.kind==="ref");
+    if(m){ if(isRef){ var sm0=findSaved(m.smId); label=sm0?sm0.label:""; expr=sm0?sm0.expr:""; } else { label=m.label||""; expr=m.expr||""; } }
+    $id("calc-name").value=label; $id("calc-expr").value=expr;
     $id("calc-err").textContent="";
+    // default unchecked: editing without saving makes it chart-specific (fx). Check to keep it linked (🔗).
+    $id("calc-save").checked=false; $id("calc-save-wrap").style.display="";
+    $(".save-toggle .sl-hint, .save-toggle b").first().text(isRef ? "Update the saved measure (keeps the 🔗 link)" : "Save as a reusable measure");
     $id("calc-add").textContent = m ? "Save" : "Add measure";
     $(".h", $calc).text(m ? "Edit calculated measure" : "Calculated measure");
+    $calc.css({display:"block", top:"110px", left:Math.max(8,(window.innerWidth-420)/2)+"px"});
+    $id("calc-name").focus();
+  }
+  function openSavedMeasureDialog(sm){
+    calcEditId=null; savedEditId=sm.id;
+    $id("calc-name").value=sm.label||""; $id("calc-expr").value=sm.expr||""; $id("calc-err").textContent="";
+    $id("calc-save-wrap").style.display="none";
+    $id("calc-add").textContent="Save"; $(".h", $calc).text("Edit saved measure");
     $calc.css({display:"block", top:"110px", left:Math.max(8,(window.innerWidth-420)/2)+"px"});
     $id("calc-name").focus();
   }
@@ -692,10 +1234,23 @@
     var name=$id("calc-name").value.trim(), expr=$id("calc-expr").value.trim(), errEl=$id("calc-err");
     if(!name){ errEl.textContent="Give the measure a name."; return; }
     if(!expr){ errEl.textContent="Enter an expression."; return; }
-    try { var fn=compileCalc(expr); fn(function(f,field){ if(fieldIndex[field]===undefined) throw new Error('Unknown field: ['+field+']'); return 0; }); }
+    try { var fn=compileCalc(expr); fn([]); }
     catch(e){ errEl.textContent=String(e.message||e); return; }
-    if(calcEditId){ var m=findMeasure(calcEditId); if(m){ m.label=name; m.expr=expr; delete m._fn; } }
-    else state.values.push({ id:"m"+(uid++), kind:"calc", label:name, expr:expr });
+    var save=$id("calc-save").checked;
+    if(savedEditId){ var sm=findSaved(savedEditId); if(sm){ var oldL=sm.label; sm.label=name; sm.expr=expr; renameMeasureRefs(oldL, name); } savedEditId=null; clearCalcCaches(); saveState(); renderFields(); rerender(); hideAC(); $calc.hide(); return; }
+    if(calcEditId){
+      var m=findMeasure(calcEditId);
+      if(m){
+        if(save){
+          if(m.kind==="ref"){ var sm2=findSaved(m.smId); if(sm2){ var oldL2=sm2.label; sm2.label=name; sm2.expr=expr; renameMeasureRefs(oldL2, name); } else { var nl=addToLibrary(name,expr); m.smId=nl.id; } clearCalcCaches(); renderFields(); } // keep linked, update library (propagates)
+          else { var nl2=addToLibrary(name,expr); m.kind="ref"; m.smId=nl2.id; delete m.label; delete m.expr; delete m._fn; renderFields(); } // promote calc -> linked
+        } else {
+          m.kind="calc"; m.label=name; m.expr=expr; delete m.smId; delete m._fn; // chart-specific (fx); detaches a former link
+        }
+      }
+    }
+    else if(save){ var nsm=addToLibrary(name, expr); state.values.push({ id:"m"+(uid++), kind:"ref", smId:nsm.id }); renderFields(); } // new + linked
+    else state.values.push({ id:"m"+(uid++), kind:"calc", label:name, expr:expr }); // new + chart-specific
     calcEditId=null; hideAC(); $calc.hide(); renderBuckets(); rerender();
   });
 
@@ -714,35 +1269,62 @@
   }
   function hideAC(){ acEl.style.display="none"; acItems=[]; acIdx=-1; }
   function paintAC(){ $(acEl).find(".it").each(function(){ $(this).toggleClass("on", (+$(this).data("i"))===acIdx); }); }
+  var KEYWORDS=["AND","OR","NOT","IN","CONTAINS","STARTSWITH","ENDSWITH"];
   function showAC(){
     var ctx=acContext(); if(!ctx){ hideAC(); return; }
-    var frag=ctx.frag.toLowerCase(), list;
-    if(ctx.mode==="field") list=headers.filter(function(h){ return h.toLowerCase().indexOf(frag)>=0; });
-    else list=FUNCS.filter(function(f){ return f.toLowerCase().indexOf(frag)>=0; });
-    list=list.slice(0,8);
+    var frag=ctx.frag.toLowerCase(), list=[];
+    if(ctx.mode==="field"){
+      headers.forEach(function(h){ if(h.toLowerCase().indexOf(frag)>=0) list.push({v:h,k:"field"}); });
+      (state.savedMeasures||[]).forEach(function(m){ if(String(m.label).toLowerCase().indexOf(frag)>=0) list.push({v:m.label,k:"measure"}); });
+    }
+    else { FUNCS.forEach(function(f){ if(f.toLowerCase().indexOf(frag)>=0) list.push({v:f,k:"fn"}); }); KEYWORDS.forEach(function(w){ if(w.toLowerCase().indexOf(frag)>=0) list.push({v:w,k:"kw"}); }); }
+    list=list.slice(0,12);
     if(!list.length){ hideAC(); return; }
     acItems=list; acIdx=0; acMode=ctx.mode; acCtx=ctx;
-    acEl.innerHTML=list.map(function(it,i){ return '<div class="it'+(i===0?" on":"")+'" data-i="'+i+'"><span>'+esc(it)+'</span><span class="k">'+(ctx.mode==="field"?"field":"function")+'</span></div>'; }).join("");
+    acEl.innerHTML=list.map(function(it,i){ var tag=it.k==="field"?"field":(it.k==="fn"?"function":(it.k==="measure"?"measure":"keyword")); return '<div class="it'+(i===0?" on":"")+'" data-i="'+i+'"><span>'+esc(it.v)+'</span><span class="k">'+tag+'</span></div>'; }).join("");
     var r=exprEl.getBoundingClientRect();
     acEl.style.left=r.left+"px"; acEl.style.top=Math.min(r.bottom, window.innerHeight-210)+"px"; acEl.style.width=r.width+"px"; acEl.style.display="block";
   }
   function applyAC(i){
     if(i<0||i>=acItems.length) return;
-    var val=acItems[i], v=exprEl.value, after=v.slice(acCtx.end), caret;
-    if(acMode==="field"){ var closer=(after[0]==="]")?"":"]"; exprEl.value=v.slice(0,acCtx.start)+val+closer+after; caret=acCtx.start+val.length+closer.length+(after[0]==="]"?1:0); }
-    else { var ins=val+"(["; exprEl.value=v.slice(0,acCtx.start)+ins+after; caret=acCtx.start+ins.length; }
+    var it=acItems[i], val=it.v, v=exprEl.value, after=v.slice(acCtx.end), caret, ins;
+    if(it.k==="field"||it.k==="measure"){ var closer=(after[0]==="]")?"":"]"; ins=val+closer; exprEl.value=v.slice(0,acCtx.start)+ins+after; caret=acCtx.start+ins.length+(after[0]==="]"?1:0); }
+    else if(it.k==="fn"){ ins=val+"(["; exprEl.value=v.slice(0,acCtx.start)+ins+after; caret=acCtx.start+ins.length; }
+    else { ins=val+" "; exprEl.value=v.slice(0,acCtx.start)+ins+after; caret=acCtx.start+ins.length; }
     exprEl.focus(); exprEl.setSelectionRange(caret,caret); hideAC(); showAC();
   }
   exprEl.addEventListener("input", showAC);
   exprEl.addEventListener("keydown", function(e){
     if(acEl.style.display==="none") return;
-    if(e.key==="ArrowDown"){ e.preventDefault(); acIdx=(acIdx+1)%acItems.length; paintAC(); }
-    else if(e.key==="ArrowUp"){ e.preventDefault(); acIdx=(acIdx-1+acItems.length)%acItems.length; paintAC(); }
-    else if(e.key==="Enter"||e.key==="Tab"){ e.preventDefault(); applyAC(acIdx); }
-    else if(e.key==="Escape"){ e.preventDefault(); hideAC(); }
+    // while the autocomplete is open, these keys drive it — stop them reaching the dialog Enter/Esc handler
+    if(e.key==="ArrowDown"){ e.preventDefault(); e.stopPropagation(); acIdx=(acIdx+1)%acItems.length; paintAC(); }
+    else if(e.key==="ArrowUp"){ e.preventDefault(); e.stopPropagation(); acIdx=(acIdx-1+acItems.length)%acItems.length; paintAC(); }
+    else if(e.key==="Enter"||e.key==="Tab"){ e.preventDefault(); e.stopPropagation(); applyAC(acIdx); }
+    else if(e.key==="Escape"){ e.preventDefault(); e.stopPropagation(); hideAC(); }
   });
   $(acEl).on("mousedown", ".it", function(e){ e.preventDefault(); applyAC(+$(this).data("i")); });
   $(acEl).on("mouseover", ".it", function(){ acIdx=+$(this).data("i"); paintAC(); });
+
+  // Esc = Cancel, Enter = primary action, for the app's dialog boxes.
+  document.addEventListener("keydown", function(e){
+    if(e.key!=="Escape" && e.key!=="Enter") return;
+    var vis=function(id){ return document.getElementById(id).style.display==="block"; };
+    var inTextarea = document.activeElement && document.activeElement.tagName==="TEXTAREA";
+    var dlg=null, ok=null, cancel=null;
+    if(vis("calc")){ dlg="calc"; ok="calc-add"; cancel="calc-cancel"; }
+    else if(vis("pin")){ dlg="pin"; ok="pin-ok"; cancel="pin-cancel"; }
+    else if(vis("slicer")){ dlg="slicer"; ok="slicer-ok"; cancel="slicer-cancel"; }
+    else if(vis("xfilter")){ dlg="xfilter"; ok="xf-ok"; cancel="xf-cancel"; }
+    else if(vis("impdlg")){ if(e.key==="Escape"){ e.preventDefault(); $id("imp-cancel").click(); } return; }
+    else if(vis("flt")){
+      if(e.key==="Escape"){ e.preventDefault(); $("#flt .cancel").click(); }
+      else if(e.key==="Enter" && !inTextarea){ e.preventDefault(); $("#flt .apply").click(); }
+      return;
+    }
+    if(!dlg) return;
+    if(e.key==="Escape"){ e.preventDefault(); $id(cancel).click(); }
+    else if(e.key==="Enter" && !inTextarea){ e.preventDefault(); $id(ok).click(); }
+  });
 
   // ---------------- view controls ----------------
   function renderComboCfg(){
@@ -755,28 +1337,49 @@
       return '<span class="cc" data-id="'+m.id+'"><b>'+esc(measureLabel(m))+'</b>'+
         '<select data-cc="type"><option value="bar"'+(typ==="bar"?" selected":"")+'>bar</option><option value="line"'+(typ==="line"?" selected":"")+'>line</option></select>'+
         '<select data-cc="axis"><option value="y"'+(ax==="y"?" selected":"")+'>left axis</option><option value="y2"'+(ax==="y2"?" selected":"")+'>right axis</option></select></span>';
-    }).join("") || '<span style="color:var(--muted);font-size:11px;">Add measures to configure the combo chart.</span>';
+    }).join("") || '<span style="color:var(--muted);font-size:13px;">Add measures to configure the combo chart.</span>';
   }
   function updateChartUI(){
     $("#charttype").toggle(state.view==="chart");
     $id("chartopts").style.display = state.view==="chart" ? "flex" : "none";
+    $id("kpiopts").style.display = state.view==="kpi" ? "flex" : "none";
+    if(state.view==="kpi") renderKpiSwatches();
     renderComboCfg();
   }
+  function renderKpiSwatches(){
+    var cur0=(state.chartOpts&&state.chartOpts.kpiColor)||"#003049";
+    var html=PALETTE.map(function(c){ return '<span class="kpi-sw'+(c.toLowerCase()===cur0.toLowerCase()?" on":"")+'" data-c="'+c+'" style="background:'+c+'" title="'+c+'"></span>'; }).join("");
+    $id("kpi-swatches").innerHTML=html;
+    $id("kpi-color-custom").value = /^#[0-9a-fA-F]{6}$/.test(cur0)? cur0 : "#003049";
+  }
+  $(document).on("click", "#kpi-swatches .kpi-sw", function(){ state.chartOpts.kpiColor=$(this).data("c"); renderKpiSwatches(); rerender(); });
+  $id("kpi-color-custom").addEventListener("input", function(){ state.chartOpts.kpiColor=this.value; renderKpiSwatches(); rerender(); });
   $("#viewseg button").on("click", function(){ state.view=$(this).data("view"); $("#viewseg button").removeClass("on"); $(this).addClass("on"); updateChartUI(); rerender(); });
   $("#charttype").on("change", function(){ state.chartType=this.value; updateChartUI(); rerender(); });
   $("#opt-legend").on("change", function(){ state.chartOpts.legend=this.checked; rerender(); });
   $("#opt-labels").on("change", function(){ state.chartOpts.labels=this.checked; rerender(); });
+  $("#opt-labelseries").on("change", function(){ state.chartOpts.labelSeries=this.checked; rerender(); });
   $(document).on("change", "#combo-cfg select[data-cc]", function(){
     var id=$(this).closest(".cc").data("id"), which=$(this).data("cc"), co=state.chartOpts.combo||(state.chartOpts.combo={});
     (co[id]||(co[id]={}))[which]=this.value; rerender();
   });
   $("#tg-totals").on("change", function(){ state.totals=this.checked; rerender(); });
   $("#tg-subtot").on("change", function(){ state.subtotals=this.checked; rerender(); });
+  $("#tg-collapsible").on("change", function(){ state.collapsible=this.checked; rerender(); });
+  // expand/collapse a row group (works in the builder table and in dashboard tiles)
+  $(document).on("click", ".ctoggle", function(e){
+    e.stopPropagation();
+    var prefix=this.getAttribute("data-prefix");
+    var tileEl=$(this).closest(".grid-stack-item")[0];
+    if(tileEl){ var tile=findTile(tileEl.getAttribute("gs-id")); if(!tile) return; var cf2=tile.cfg; cf2.collapsed=cf2.collapsed||{}; if(cf2.collapsed[prefix]) delete cf2.collapsed[prefix]; else cf2.collapsed[prefix]=true; saveState(); renderConfig(tileEffective(tile), tileEl.querySelector(".tile-body")); }
+    else { state.collapsed=state.collapsed||{}; if(state.collapsed[prefix]) delete state.collapsed[prefix]; else state.collapsed[prefix]=true; rerender(); }
+  });
   $("#csvbtn").on("click", exportCSV);
   $("#copybtn").on("click", copyTable);
 
   // click a measure/row header to sort
   $(document).on("click", "table.pivot th[data-sort]", function(){
+    if(!$(this).closest("#result").length) return; // tiles are static; only the builder table sorts
     var key=String($(this).data("sort")), s=state.sort||{key:"__row__",dir:1};
     if(String(s.key)===key){ s.dir=-s.dir; } else { s.key=key; s.dir=(key==="__row__")?1:-1; }
     state.sort=s; rerender();
@@ -819,16 +1422,369 @@
     else { try { var ta=document.createElement("textarea"); ta.value=tsv; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove(); done(true); } catch(e){ done(false); } }
   }
 
+  // ================= dashboard (multi-tab) =================
+  var gridApi=null, editingTileId=null, tuid=1, tabuid=1;
+
+  function activeTab(){
+    var d=state.dash;
+    if(!d.tabs||!d.tabs.length){ d.tabs=[{id:"tab1",name:"Tab 1",tiles:[],global:{}}]; d.activeTabId="tab1"; }
+    var a=null; d.tabs.forEach(function(t){ if(t.id===d.activeTabId) a=t; });
+    if(!a){ a=d.tabs[0]; d.activeTabId=a.id; }
+    return a;
+  }
+  function findTab(id){ for(var i=0;i<state.dash.tabs.length;i++){ if(state.dash.tabs[i].id===id) return state.dash.tabs[i]; } return null; }
+  function tabOfTile(id){ for(var i=0;i<state.dash.tabs.length;i++){ var ts=state.dash.tabs[i].tiles; for(var j=0;j<ts.length;j++){ if(String(ts[j].id)===String(id)) return state.dash.tabs[i]; } } return null; }
+  function freshTab(name){ tabuid++; return { id:"tab"+tabuid, name:name||("Tab "+tabuid), tiles:[], global:{} }; }
+
+  function snapshotCfg(){
+    return JSON.parse(JSON.stringify({
+      rows:state.rows, cols:state.cols, filters:state.filters, values:state.values,
+      exclusions:state.exclusions, view:state.view, chartType:state.chartType,
+      sort:state.sort, totals:state.totals, subtotals:state.subtotals, collapsible:state.collapsible, collapsed:state.collapsed, chartOpts:state.chartOpts
+    }));
+  }
+  function mergeExcl(a,b){ var out={}; function add(o){ for(var f in o){ if(!o[f]||!o[f].length) continue; var s=out[f]||(out[f]=[]); o[f].forEach(function(v){ if(s.indexOf(v)<0) s.push(v); }); } } add(a||{}); add(b||{}); return out; }
+  function tileEffective(tile){ var c=JSON.parse(JSON.stringify(tile.cfg)); c.exclusions=mergeExcl(mergeExcl(mergeExcl(tile.cfg.exclusions, activeTab().global), slicerExclusionsFor(tile.id)), xfilterExclusionsFor(tile.id)); if(tile.kind==="kpi") c.view="kpi"; return c; }
+  // Convert a slicer's selection into an exclusions object for its field.
+  function slicerToExclusions(s){
+    if(!s.field) return null;
+    var all=distinct[s.field]||[];
+    if(s.stype==="range"){
+      var mn=s.sel&&s.sel.min, mx=s.sel&&s.sel.max;
+      if((mn===null||mn===undefined||mn==="") && (mx===null||mx===undefined||mx==="")) return null;
+      var dateF=isDateField(all);
+      var conv=function(v){ return dateF? parseDateVal(v) : ((v===""||v===null||v===undefined||!isFinite(Number(v)))?null:Number(v)); };
+      var lo=conv(mn), hi=conv(mx);
+      var ex=all.filter(function(v){ var x=conv(v); if(x===null) return false; if(lo!==null && x<lo) return true; if(hi!==null && x>hi) return true; return false; });
+      return { field:s.field, values:ex };
+    }
+    return { field:s.field, values:(s.sel&&s.sel.excluded)||[] };
+  }
+  function slicerExclusionsFor(tileId){
+    var out={}, tab=activeTab();
+    tab.tiles.forEach(function(s){
+      if(s.kind!=="slicer") return;
+      if(!(s.allTargets || (s.targets||[]).indexOf(tileId)>=0)) return;
+      var ex=slicerToExclusions(s);
+      if(ex && ex.values && ex.values.length){ var arr=out[ex.field]||(out[ex.field]=[]); ex.values.forEach(function(v){ if(arr.indexOf(v)<0) arr.push(v); }); }
+    });
+    return out;
+  }
+  // click-to-filter: chart tiles whose xfilter is on and that have a current click selection (xsel) filter their targets
+  function xfilterExclusionsFor(tileId){
+    var out={}, tab=activeTab();
+    tab.tiles.forEach(function(s){
+      if(s.kind!=="chart" || !s.xfilter || !s.xfilter.on || !s.xsel || s.id===tileId) return;
+      if(!(s.xfilter.allTargets || (s.xfilter.targets||[]).indexOf(tileId)>=0)) return;
+      var pairs=Array.isArray(s.xsel)? s.xsel : (s.xsel.field?[s.xsel]:[]); // [{field,value},…] path (back-compat for old single)
+      pairs.forEach(function(p){ if(!p||!p.field) return; var field=p.field, val=String(p.value), all=distinct[field]||[]; var arr=out[field]||(out[field]=[]); all.forEach(function(v){ if(String(v)!==val && arr.indexOf(v)<0) arr.push(v); }); });
+    });
+    return out;
+  }
+  function findTile(id){ for(var ti=0;ti<state.dash.tabs.length;ti++){ var ts=state.dash.tabs[ti].tiles; for(var i=0;i<ts.length;i++){ if(String(ts[i].id)===String(id)) return ts[i]; } } return null; }
+  function bottomYof(tab){ var y=0; tab.tiles.forEach(function(t){ y=Math.max(y,(t.y||0)+(t.h||1)); }); return y; }
+
+  // render any config into any element (used for tiles)
+  function renderConfig(cfg, el){
+    CTX=cfg; IS_BUILDER_RENDER=false;
+    try{
+      if((!cfg.values||!cfg.values.length) && !(cfg.view==="table" && cfg.rows && cfg.rows.length)){ el.innerHTML='<div class="empty-note"><span class="big">Σ</span><div>No measure</div></div>'; return; }
+      var P=compute();
+      if(!P.filtered.length){ el.innerHTML='<div class="empty-note"><span class="big">⛃</span><div>No rows match filters</div></div>'; return; }
+      if(cfg.view==="kpi") renderKPI(P, el);
+      else if(cfg.view==="chart") renderChart(P, el);
+      else renderTable(P, el);
+    } catch(e){ el.innerHTML='<div class="empty-note">⚠ '+esc(String(e&&e.message||e))+'</div>'; }
+    finally{ CTX=null; IS_BUILDER_RENDER=true; }
+  }
+
+  function setMode(mode){
+    state.mode=mode; saveState();
+    $("#modeseg button").removeClass("on").filter('[data-mode="'+mode+'"]').addClass("on");
+    $id("builder").style.display = mode==="builder"?"":"none";
+    $id("dashboard").style.display = mode==="dashboard"?"":"none";
+    if(mode==="dashboard") renderDashboard();
+  }
+  $("#modeseg button").on("click", function(){ setMode($(this).data("mode")); });
+
+  // ---- tabs ----
+  function renderTabs(){
+    var d=state.dash, html="";
+    d.tabs.forEach(function(t){ html+='<div class="dtab'+(t.id===d.activeTabId?" on":"")+'" data-id="'+t.id+'" title="Double-click to rename"><span class="nm">'+esc(t.name)+'</span>'+(d.tabs.length>1?'<span class="x" data-act="deltab" title="Delete tab">✕</span>':'')+'</div>'; });
+    html+='<button id="addtab" class="addtab" title="Add a tab">＋ Tab</button>';
+    $id("dtabs").innerHTML=html;
+  }
+  $(document).on("click", "#dtabs .dtab", function(e){ var id=$(this).data("id"); if($(e.target).data("act")==="deltab"){ deleteTab(id); return; } if(id!==state.dash.activeTabId){ state.dash.activeTabId=id; saveState(); renderDashboard(); } });
+  $(document).on("dblclick", "#dtabs .dtab .nm", function(){ var id=$(this).closest(".dtab").data("id"), t=findTab(id); if(!t) return; var nm=window.prompt("Rename tab:", t.name); if(nm!==null){ t.name=nm.trim()||t.name; saveState(); renderTabs(); } });
+  $(document).on("click", "#addtab", function(){ var nm=window.prompt("New tab name:", "Tab "+(state.dash.tabs.length+1)); if(nm===null) return; var t=freshTab(nm.trim()); state.dash.tabs.push(t); state.dash.activeTabId=t.id; saveState(); renderDashboard(); });
+  function deleteTab(id){ var d=state.dash; if(d.tabs.length<=1) return; var t=findTab(id); if(t && t.tiles.length && !window.confirm('Delete tab "'+t.name+'" and its '+t.tiles.length+' tile(s)?')) return; d.tabs=d.tabs.filter(function(x){return x.id!==id;}); if(d.activeTabId===id) d.activeTabId=d.tabs[0].id; saveState(); renderDashboard(); }
+
+  function tileMarkup(tile){
+    var tools;
+    if(tile.kind==="slicer") tools='<span class="ic" data-act="cfg" title="Configure slicer">⚙</span><span class="ic" data-act="del" title="Remove">✕</span>';
+    else {
+      var xf = (tile.kind==="chart") ? '<span class="ic'+((tile.xfilter&&tile.xfilter.on)?" on":"")+'" data-act="xf" title="Click this chart to filter other tiles">⌖</span>' : '';
+      tools = xf+'<span class="ic" data-act="edit" title="Edit in Builder">✎</span><span class="ic" data-act="dup" title="Duplicate">⧉</span><span class="ic" data-act="del" title="Remove">✕</span>';
+    }
+    var cls="grid-stack-item-content"+(tile.kind==="slicer"?" slicer-tile":"")+((tile.xfilter&&tile.xfilter.on)?" xf-on":"");
+    return '<div class="'+cls+'"><div class="tile-head"><span class="tt" title="'+esc(tile.title)+'">'+esc(tile.title)+'</span>'+tools+'</div><div class="tile-body"></div></div>';
+  }
+  function renderTileBody(tile, body){ if(tile.kind==="slicer") renderSlicer(tile, body); else renderConfig(tileEffective(tile), body); }
+  function paintTile(tile, gridItemEl){ var body=gridItemEl.querySelector(".tile-body"); renderTileBody(tile, body); wireCrossFilter(tile, body); }
+  function wireCrossFilter(tile, body){
+    if(tile.kind!=="chart" || !tile.xfilter || !tile.xfilter.on) return;
+    var cd=body.querySelector(".chartbox"); if(!cd || !cd.on) return;
+    var rf=(tile.cfg&&tile.cfg.rows)||[]; if(!rf.length) return;
+    var ct=tile.cfg.chartType;
+    cd.on("plotly_click", function(ev){
+      var pt=ev.points&&ev.points[0]; if(!pt) return;
+      var sel=null;
+      if(ct==="pie"){ var tup=(cd._xraw||[])[pt.pointNumber]; if(!tup) return; sel=rf.map(function(f,i){ return {field:f, value:String(tup[i]==null?"":tup[i])}; }); }
+      else if(HIER[ct]){ var id=(pt.id!=null)?String(pt.id):null; if(id==null||id==="all") return; var parts=id.split(SEP); sel=parts.map(function(p,i){ return {field:rf[i], value:String(p)}; }).filter(function(x){ return x.field; }); } // node id = raw path
+      else { var raw=(pt.customdata!=null)?pt.customdata:(pt.x!==undefined?pt.x:pt.y); sel=[{field:rf[0], value:String(raw)}]; }
+      if(!sel || !sel.length) return;
+      var key=JSON.stringify(sel);
+      if(tile.xsel && JSON.stringify(Array.isArray(tile.xsel)?tile.xsel:[tile.xsel])===key) tile.xsel=null; else tile.xsel=sel;
+      saveState(); reRenderDataTiles(tile.id); // skip the source so its native drill/zoom animation isn't overwritten
+    });
+  }
+
+  function renderDashboard(){
+    try { renderDashboardInner(); }
+    catch(e){ $id("grid").innerHTML='<div class="dash-empty">⚠ Dashboard error: '+esc(String(e&&e.message||e))+'</div>'; }
+  }
+  function renderDashboardInner(){
+    if(!state.dash || !state.dash.tabs) state.dash=freshDash();
+    if(!window.GridStack){ $id("grid").innerHTML='<div class="dash-empty">Grid library failed to load (needs internet).</div>'; return; }
+    var sel=$id("gf-add"); if(sel && sel.options && sel.options.length<=1){ headers.forEach(function(h){ var o=document.createElement("option"); o.value=h; o.textContent=h; sel.appendChild(o); }); }
+    $id("dash-cols").value=state.dash.cols; $id("dash-cellh").value=state.dash.cellH;
+    renderTabs();
+    var tab=activeTab();
+    renderGfChips();
+    var has=tab.tiles.length>0;
+    $id("dash-empty").style.display = has?"none":"";
+    $id("grid").style.display = has?"":"none";
+    if(gridApi){ gridApi.column(state.dash.cols,"none"); gridApi.cellHeight(state.dash.cellH); gridApi.removeAll(); }
+    if(!has) return;
+    if(!gridApi){
+      gridApi=GridStack.init({ column:state.dash.cols, cellHeight:state.dash.cellH, margin:6, float:true, handle:".tile-head" }, $id("grid"));
+      gridApi.on("change", function(){ syncTilePositions(); saveState(); });
+      gridApi.on("resizestop", function(e,el){ resizeTile(el); });
+    }
+    tab.tiles.forEach(function(tile){
+      var el=document.createElement("div"); el.className="grid-stack-item"; el.setAttribute("gs-id",tile.id);
+      el.setAttribute("gs-x",tile.x||0); el.setAttribute("gs-y",tile.y||0); el.setAttribute("gs-w",tile.w||4); el.setAttribute("gs-h",tile.h||6);
+      el.innerHTML=tileMarkup(tile);
+      $id("grid").appendChild(el);
+      gridApi.makeWidget(el);
+      paintTile(tile, el);
+    });
+    resizeAllCharts();
+  }
+  function resizeTile(el){ var box=el.querySelector(".chartbox"); if(box && window.Plotly) try{ Plotly.Plots.resize(box); }catch(e){} }
+  function resizeAllCharts(){ setTimeout(function(){ $("#grid .chartbox").each(function(){ try{ Plotly.Plots.resize(this); }catch(e){} }); }, 60); }
+  function renderTiles(){ var self=this; $("#grid .grid-stack-item").each(function(){ var t=findTile(this.getAttribute("gs-id")); if(t) paintTile(t, this); }); resizeAllCharts(); }
+  function reRenderDataTiles(exceptId){ $("#grid .grid-stack-item").each(function(){ var id=this.getAttribute("gs-id"); if(exceptId && id===String(exceptId)) return; var t=findTile(id); if(t && t.kind!=="slicer") paintTile(t, this); }); resizeAllCharts(); }
+
+  // ---- slicer rendering & interactions ----
+  function renderSlicer(tile, body){
+    var field=tile.field;
+    if(!field){ body.innerHTML='<div class="empty-note">Configure this slicer (⚙).</div>'; return; }
+    if(tile.stype==="range"){
+      var dateF=isDateField(distinct[field]||[]), typ=dateF?"date":"number", sel=tile.sel||(tile.sel={});
+      body.innerHTML='<div class="slicer"><div class="sl-field">'+esc(field)+'</div>'+
+        '<div class="sl-range"><label>Min <input type="'+typ+'" class="sl-min" value="'+esc(sel.min!=null?sel.min:"")+'"></label>'+
+        '<label>Max <input type="'+typ+'" class="sl-max" value="'+esc(sel.max!=null?sel.max:"")+'"></label></div>'+
+        '<a class="sl-clear">Clear</a></div>';
+      return;
+    }
+    body.innerHTML='<div class="slicer"><div class="sl-field">'+esc(field)+'</div>'+
+      '<input type="text" class="sl-search" placeholder="Search…">'+
+      '<div class="sl-sub"><a class="sl-all">All</a> · <a class="sl-none">None</a></div>'+
+      '<div class="sl-list"></div></div>';
+    renderSlicerList(tile, body, "");
+  }
+  function renderSlicerList(tile, body, q){
+    var field=tile.field, all=distinct[field]||[], excl={}; ((tile.sel&&tile.sel.excluded)||[]).forEach(function(v){ excl[v]=1; });
+    q=(q||"").toLowerCase();
+    var m=q? all.filter(function(v){ return dispLabel(v).toLowerCase().indexOf(q)>=0 || v.toLowerCase().indexOf(q)>=0; }) : all;
+    var CAP=300, show=m.slice(0,CAP), frag=document.createDocumentFragment();
+    show.forEach(function(v){ var lab=document.createElement("label"); var cb=document.createElement("input"); cb.type="checkbox"; cb.checked=!excl[v]; cb.setAttribute("data-v", v); var sp=document.createElement("span"); sp.textContent=(v===""?"(blank)":dispLabel(v)); lab.appendChild(cb); lab.appendChild(sp); frag.appendChild(lab); });
+    var listEl=body.querySelector(".sl-list"); listEl.innerHTML=""; listEl.appendChild(frag);
+    if(m.length>CAP){ var n=document.createElement("div"); n.className="sl-more"; n.textContent="(first "+CAP+" of "+m.length.toLocaleString()+" — search to narrow)"; listEl.appendChild(n); }
+  }
+  function slicerTileFrom(node){ var item=$(node).closest(".grid-stack-item")[0]; return item? findTile(item.getAttribute("gs-id")) : null; }
+  $(document).on("change", ".slicer-tile .sl-list input[type=checkbox]", function(){
+    var tile=slicerTileFrom(this); if(!tile) return; tile.sel=tile.sel||{excluded:[]}; var arr=tile.sel.excluded||(tile.sel.excluded=[]);
+    var v=this.getAttribute("data-v"), i=arr.indexOf(v);
+    if(this.checked){ if(i>=0) arr.splice(i,1); } else if(i<0) arr.push(v);
+    saveState(); reRenderDataTiles();
+  });
+  $(document).on("input", ".slicer-tile .sl-search", function(){ var tile=slicerTileFrom(this); if(tile) renderSlicerList(tile, $(this).closest(".tile-body")[0], this.value); });
+  $(document).on("click", ".slicer-tile .sl-all", function(){ var tile=slicerTileFrom(this); if(!tile) return; tile.sel={excluded:[]}; saveState(); renderSlicer(tile, $(this).closest(".tile-body")[0]); reRenderDataTiles(); });
+  $(document).on("click", ".slicer-tile .sl-none", function(){ var tile=slicerTileFrom(this); if(!tile) return; tile.sel={excluded:(distinct[tile.field]||[]).slice()}; saveState(); renderSlicer(tile, $(this).closest(".tile-body")[0]); reRenderDataTiles(); });
+  $(document).on("change", ".slicer-tile .sl-min,.slicer-tile .sl-max", function(){ var tile=slicerTileFrom(this); if(!tile) return; tile.sel=tile.sel||{}; tile.sel[$(this).hasClass("sl-min")?"min":"max"]=this.value; saveState(); reRenderDataTiles(); });
+  $(document).on("click", ".slicer-tile .sl-clear", function(){ var tile=slicerTileFrom(this); if(!tile) return; tile.sel={}; saveState(); renderSlicer(tile, $(this).closest(".tile-body")[0]); reRenderDataTiles(); });
+  function syncTilePositions(){ if(!gridApi||!gridApi.engine) return; gridApi.engine.nodes.forEach(function(n){ var t=findTile(n.el.getAttribute("gs-id")); if(t){ t.x=n.x; t.y=n.y; t.w=n.w; t.h=n.h; } }); }
+
+  // double-click a tile title to rename it
+  $(document).on("dblclick", "#grid .tile-head .tt", function(e){
+    e.stopPropagation();
+    var el=$(this).closest(".grid-stack-item")[0], tile=findTile(el.getAttribute("gs-id")); if(!tile) return;
+    var nm=window.prompt("Rename tile:", tile.title); if(nm===null) return;
+    tile.title=nm.trim()||tile.title; $(this).text(tile.title).attr("title",tile.title); saveState();
+  });
+
+  // global filters (per active tab)
+  function renderGfChips(){
+    var g=activeTab().global, html=""; for(var f in g){ if(!g[f]||!g[f].length) continue; html+='<span class="gf-chip" data-field="'+esc(f)+'">'+filterLabel(f, g[f])+' <span class="x" data-act="gfx">✕</span></span>'; }
+    $id("gf-chips").innerHTML=html;
+  }
+  function onGlobalChange(){ renderGfChips(); renderTiles(); saveState(); }
+  $(document).on("click", "#gf-chips .gf-chip", function(e){ var f=$(this).data("field"); if($(e.target).data("act")==="gfx"){ delete activeTab().global[f]; onGlobalChange(); } else { openFilter(f, this, {src:activeTab().global, onApply:onGlobalChange}); } });
+  $(document).on("change", "#gf-add", function(){ var f=this.value; this.value=""; if(f) openFilter(f, this, {src:activeTab().global, onApply:onGlobalChange}); });
+
+  $id("dash-cols").addEventListener("change", function(){ var n=Math.max(1,Math.min(12,parseInt(this.value,10)||10)); this.value=n; state.dash.cols=n; if(gridApi) gridApi.column(n); saveState(); resizeAllCharts(); });
+  $id("dash-cellh").addEventListener("change", function(){ var n=Math.max(20,Math.min(120,parseInt(this.value,10)||44)); state.dash.cellH=n; if(gridApi) gridApi.cellHeight(n); saveState(); resizeAllCharts(); });
+  $id("dash-refresh").addEventListener("click", load);
+
+  // tile toolbar (active tab)
+  $(document).on("click", "#grid .ic[data-act]", function(){
+    var el=$(this).closest(".grid-stack-item")[0]; var tile=findTile(el.getAttribute("gs-id")); if(!tile) return; var act=$(this).data("act"); var tab=activeTab();
+    if(act==="del"){ if(gridApi) gridApi.removeWidget(el); tab.tiles=tab.tiles.filter(function(t){return t!==tile;}); saveState(); $id("dash-empty").style.display=tab.tiles.length?"none":""; $id("grid").style.display=tab.tiles.length?"":"none"; }
+    else if(act==="dup"){ var c=JSON.parse(JSON.stringify(tile)); c.id="t"+(tuid++); c.x=0; c.y=bottomYof(tab); tab.tiles.push(c); saveState(); renderDashboard(); }
+    else if(act==="edit"){ loadCfgIntoBuilder(tile.cfg); setEditingTile(tile.id); setMode("builder"); }
+    else if(act==="cfg"){ openSlicerDialog(tile); }
+    else if(act==="xf"){ openXfilterDialog(tile); }
+  });
+
+  // ---- cross-filter (chart-as-filter) dialog ----
+  var $xf=$("#xfilter"), xfEditId=null;
+  function openXfilterDialog(tile){
+    xfEditId=tile.id; var xf=tile.xfilter||{on:false,allTargets:true,targets:[]};
+    $id("xf-on").checked=!!xf.on; $id("xf-all").checked=(xf.allTargets!==false);
+    var wrap=$id("xf-targets"), sel={}; (xf.targets||[]).forEach(function(id){ sel[id]=1; });
+    var list=activeTab().tiles.filter(function(t){ return t.id!==tile.id && t.kind!=="slicer"; });
+    wrap.innerHTML = list.length ? list.map(function(t){ return '<label style="display:flex;gap:6px;align-items:center;font-size:13px;padding:2px 0;"><input type="checkbox" class="xf-target" value="'+t.id+'"'+(sel[t.id]?" checked":"")+' /> '+esc(t.title)+'</label>'; }).join("") : '<div style="color:var(--muted);font-size:12px;">No other tiles on this tab yet.</div>';
+    wrap.style.display = $id("xf-all").checked ? "none" : "";
+    $xf.css({display:"block", top:"90px", left:Math.max(8,(window.innerWidth-360)/2)+"px"});
+  }
+  $id("xf-all").addEventListener("change", function(){ $id("xf-targets").style.display=this.checked?"none":""; });
+  $id("xf-cancel").addEventListener("click", function(){ $xf.hide(); xfEditId=null; });
+  $id("xf-ok").addEventListener("click", function(){
+    var t=findTile(xfEditId); if(t){ var on=$id("xf-on").checked, allT=$id("xf-all").checked, targets=[]; $("#xf-targets .xf-target:checked").each(function(){ targets.push(this.value); });
+      t.xfilter={on:on, allTargets:allT, targets:targets}; if(!on) t.xsel=null; }
+    xfEditId=null; $xf.hide(); saveState(); renderDashboard();
+  });
+
+  // ---- slicer config dialog ----
+  var $slicer=$("#slicer"), slicerEditId=null;
+  function renderSlicerTargets(tile){
+    var wrap=$id("slicer-targets"), sel={}; ((tile&&tile.targets)||[]).forEach(function(id){ sel[id]=1; });
+    var list=activeTab().tiles.filter(function(t){ return t.kind!=="slicer"; });
+    wrap.innerHTML = list.length ? list.map(function(t){ return '<label style="display:flex;gap:6px;align-items:center;font-size:13px;padding:2px 0;"><input type="checkbox" class="sl-target" value="'+t.id+'"'+(sel[t.id]?" checked":"")+' /> '+esc(t.title)+'</label>'; }).join("") : '<div style="color:var(--muted);font-size:12px;">No chart/table tiles on this tab yet.</div>';
+    wrap.style.display = $id("slicer-all").checked ? "none" : "";
+  }
+  function openSlicerDialog(tile){
+    slicerEditId = tile? tile.id : null;
+    var fsel=$id("slicer-field"); fsel.innerHTML=""; headers.forEach(function(h){ var o=document.createElement("option"); o.value=h; o.textContent=h; fsel.appendChild(o); });
+    fsel.value = tile? tile.field : headers[0];
+    $('input[name=slicer-type][value="'+((tile&&tile.stype==="range")?"range":"list")+'"]').prop("checked", true);
+    $id("slicer-all").checked = tile ? (tile.allTargets!==false) : true;
+    renderSlicerTargets(tile);
+    $("#slicer .h").text(tile?"Edit slicer":"Slicer"); $id("slicer-ok").textContent = tile?"Save":"Add slicer";
+    $slicer.css({display:"block", top:"90px", left:Math.max(8,(window.innerWidth-360)/2)+"px"});
+  }
+  $id("slicer-all").addEventListener("change", function(){ $id("slicer-targets").style.display=this.checked?"none":""; });
+  $id("add-slicer").addEventListener("click", function(){ if(!headers.length){ return; } openSlicerDialog(null); });
+  $id("slicer-cancel").addEventListener("click", function(){ $slicer.hide(); slicerEditId=null; });
+  $id("slicer-ok").addEventListener("click", function(){
+    var field=$id("slicer-field").value, stype=$('input[name=slicer-type]:checked').val()||"list", allT=$id("slicer-all").checked, targets=[];
+    $("#slicer-targets .sl-target:checked").each(function(){ targets.push(this.value); });
+    if(slicerEditId){ var t=findTile(slicerEditId); if(t){ if(t.field!==field||t.stype!==stype) t.sel={}; t.field=field; t.stype=stype; t.allTargets=allT; t.targets=targets; t.title=field; } }
+    else { var tab=activeTab(); tab.tiles.push({ id:"t"+(tuid++), kind:"slicer", title:field, field:field, stype:stype, sel:{}, allTargets:allT, targets:targets, x:0, y:bottomYof(tab), w:3, h:4 }); }
+    slicerEditId=null; $slicer.hide(); saveState(); renderDashboard();
+  });
+
+  function loadCfgIntoBuilder(cfg){
+    var c=JSON.parse(JSON.stringify(cfg));
+    state.rows=c.rows||[]; state.cols=c.cols||[]; state.filters=c.filters||[]; state.values=c.values||[]; state.exclusions=c.exclusions||{};
+    state.view=c.view||"table"; state.chartType=c.chartType||"bar"; state.sort=c.sort||{key:"__row__",dir:1};
+    state.totals=c.totals!==false; state.subtotals=c.subtotals===true; state.collapsible=c.collapsible===true; state.collapsed=c.collapsed||{}; state.chartOpts=c.chartOpts||{legend:true,labels:false,combo:{}};
+    var mx=0; state.values.forEach(function(v){ var nn=parseInt(String(v.id).replace(/\D/g,''),10); if(nn>mx)mx=nn; }); uid=mx+1;
+    renderBuckets(); applyStateToControls(); rerender();
+  }
+
+  // editing-tile state: keeps the builder's Pin button in "update" mode + offers a way out
+  function setEditingTile(id){
+    editingTileId = id || null;
+    $id("pinbtn").textContent = editingTileId ? "✓ Update tile" : "📌 Pin to dashboard";
+    $id("pincancel").style.display = editingTileId ? "" : "none";
+  }
+  function clearBuilder(){
+    state.rows=[]; state.cols=[]; state.filters=[]; state.values=[]; state.exclusions={};
+    state.view="table"; state.chartType="bar"; state.sort={key:"__row__",dir:1}; state.totals=true; state.subtotals=false; state.collapsible=false; state.collapsed={};
+    state.chartOpts={legend:true,labels:false,labelSeries:false,combo:{},kpiColor:"#003049"};
+    setEditingTile(null); renderBuckets(); applyStateToControls(); rerender();
+  }
+  $id("newchart").addEventListener("click", function(){ clearBuilder(); setMode("builder"); });
+  $id("pincancel").addEventListener("click", function(){ setEditingTile(null); });
+
+  // pin dialog
+  var $pin=$("#pin");
+  function defaultTileTitle(){ if(state.values.length){ return state.values.map(measureLabel).slice(0,2).join(", ")+(state.rows.length?(" by "+state.rows.join(", ")):""); } if(state.rows.length) return state.rows.join(", "); return "Tile"; }
+  function openPin(){
+    var editing=!!editingTileId, et=editing?findTile(editingTileId):null;
+    $id("pin-title").value = (editing && et) ? et.title : defaultTileTitle();
+    var sel=$id("pin-tab"); sel.innerHTML="";
+    state.dash.tabs.forEach(function(t){ var o=document.createElement("option"); o.value=t.id; o.textContent=t.name; sel.appendChild(o); });
+    var nw=document.createElement("option"); nw.value="__new__"; nw.textContent="➕ New tab…"; sel.appendChild(nw);
+    sel.value = (editing && et) ? ((tabOfTile(et.id)||activeTab()).id) : state.dash.activeTabId;
+    $id("pin-newtab-wrap").style.display="none"; $id("pin-newtab").value="";
+    $(".h",$pin).text(editing?"Update tile":"Pin to dashboard");
+    $id("pin-ok").textContent = editing?"Update tile":"Add tile";
+    $pin.css({display:"block", top:"100px", left:Math.max(8,(window.innerWidth-340)/2)+"px"}); $id("pin-title").focus();
+  }
+  $id("pin-tab").addEventListener("change", function(){ $id("pin-newtab-wrap").style.display = (this.value==="__new__")?"":"none"; if(this.value==="__new__") $id("pin-newtab").focus(); });
+  $id("pinbtn").addEventListener("click", function(){
+    if(editingTileId){ openPin(); return; } // editing → dialog (lets you rename + move to another tab)
+    if(!state.values.length && !(state.view==="table" && state.rows.length)){ setStatus("Add a measure before pinning (or, for a table, a Row field).", true); return; }
+    openPin();
+  });
+  $id("pin-cancel").addEventListener("click", function(){ $pin.hide(); });
+  $id("pin-ok").addEventListener("click", function(){
+    var title=$id("pin-title").value.trim()||defaultTileTitle(), cfg=snapshotCfg();
+    var kind = state.view==="chart"?"chart":(state.view==="kpi"?"kpi":"table");
+    var tabVal=$id("pin-tab").value, target;
+    if(tabVal==="__new__"){ var nm=$id("pin-newtab").value.trim(); target=freshTab(nm); state.dash.tabs.push(target); }
+    else { target=findTab(tabVal)||activeTab(); }
+    if(editingTileId){
+      var t=findTile(editingTileId), srcTab=tabOfTile(editingTileId);
+      if(t){ t.cfg=cfg; t.title=title; t.kind=kind; if(kind==="kpi") t.cfg.view="kpi";
+        if(srcTab && srcTab!==target){ srcTab.tiles=srcTab.tiles.filter(function(x){return x!==t;}); t.x=0; t.y=bottomYof(target); target.tiles.push(t); } }
+      setEditingTile(null); state.dash.activeTabId=target.id; $pin.hide(); saveState(); setMode("dashboard"); return;
+    }
+    var w = kind==="kpi"?3:(kind==="chart"?5:4), h = kind==="kpi"?3:6;
+    target.tiles.push({ id:"t"+(tuid++), title:title, kind:kind, cfg:cfg, x:0, y:bottomYof(target), w:w, h:h });
+    state.dash.activeTabId=target.id;
+    $pin.hide(); saveState(); setMode("dashboard");
+  });
+
   // ---------------- load ----------------
-  function applyStateToControls(){ $("#viewseg button").removeClass("on").filter('[data-view="'+state.view+'"]').addClass("on"); $("#charttype").val(state.chartType); $("#tg-totals").prop("checked", state.totals!==false); $("#tg-subtot").prop("checked", state.subtotals===true); var co=state.chartOpts||(state.chartOpts={legend:true,labels:false,combo:{}}); $("#opt-legend").prop("checked", co.legend!==false); $("#opt-labels").prop("checked", co.labels===true); updateChartUI(); }
+  function applyStateToControls(){ $("#viewseg button").removeClass("on").filter('[data-view="'+state.view+'"]').addClass("on"); $("#charttype").val(state.chartType); $("#tg-totals").prop("checked", state.totals!==false); $("#tg-subtot").prop("checked", state.subtotals===true); $("#tg-collapsible").prop("checked", state.collapsible===true); var co=state.chartOpts||(state.chartOpts={legend:true,labels:false,combo:{}}); $("#opt-legend").prop("checked", co.legend!==false); $("#opt-labels").prop("checked", co.labels===true); $("#opt-labelseries").prop("checked", co.labelSeries===true); updateChartUI(); }
 
   function load(){
     var url=$id("endpoint").value.trim();
     if(!url){ setStatus("Enter the /exec endpoint URL first.", true); return; }
     $id("refresh").disabled=true;
     setStatus("<span class='spinner'></span>Fetching… (≈20k rows, a few seconds)");
-    fetch(url,{redirect:"follow"}).then(function(r){ if(!r.ok) throw new Error("HTTP "+r.status+" "+r.statusText); return r.json(); })
+    var t0=Date.now(), tNet=0, tParse=0;
+    var ctrl = window.AbortController ? new AbortController() : null;
+    var TIMEOUT_MS = 120000;
+    var timer = setTimeout(function(){ if(ctrl) ctrl.abort(); }, TIMEOUT_MS);
+    fetch(url,{redirect:"follow", signal: ctrl?ctrl.signal:undefined}).then(function(r){ if(!r.ok) throw new Error("HTTP "+r.status+" "+r.statusText); tNet=Date.now()-t0; return r.json(); })
       .then(function(d){
+        tParse=Date.now()-t0-tNet;
         if(d&&d.error) throw new Error("Endpoint returned: "+d.error);
         if(!d||!Array.isArray(d.headers)||!Array.isArray(d.rows)) throw new Error("Unexpected response shape (expected { headers, rows }).");
         headers=d.headers; rows=d.rows; fieldIndex={}; headers.forEach(function(h,i){ fieldIndex[h]=i; });
@@ -836,10 +1792,21 @@
         var sets=headers.map(function(){return new Set();});
         for(var i=0;i<rows.length;i++){ for(var c=0;c<headers.length;c++){ var v=rows[i][c]; sets[c].add(v===null||v===undefined?"":String(v)); } }
         distinct={}; headers.forEach(function(h,i){ distinct[h]=Array.from(sets[i]).sort(function(a,b){return a.localeCompare(b);}); });
+        var tRender=Date.now();
         renderFields(); renderBuckets(); initSortable(); applyStateToControls(); rerender();
+        setMode(state.mode||"builder");
+        console.log("[BI timing] network "+tNet+"ms · JSON parse "+tParse+"ms · index+render "+(Date.now()-tRender)+"ms · rows "+rows.length.toLocaleString()+(state.mode==="dashboard"?(" · dashboard tiles "+(activeTab().tiles.length)):""));
+        if($id("status").innerHTML.indexOf("spinner")>=0) setStatus("<b>"+rows.length.toLocaleString()+"</b> rows loaded.", false); // safety: never leave the spinner up after a successful load
       })
-      .catch(function(err){ $id("result").innerHTML=""; setStatus("Failed to load.\n"+(err&&err.message?err.message:err)+"\n\nIf this is a CORS error, the deployment access may not be \"Anyone\", or the URL is wrong.", true); })
-      .finally(function(){ $id("refresh").disabled=false; });
+      .catch(function(err){
+        $id("result").innerHTML="";
+        if(err && err.name==="AbortError"){
+          setStatus("Timed out after "+(TIMEOUT_MS/1000)+"s waiting for the data endpoint.\n\nThis is server-side: the Apps Script is taking too long to read the sheet (it may be hitting the ~6-min execution limit). Run testReadTab in the Apps Script editor to see the read time, and deploy the caching Code.gs + a warmCache trigger.", true);
+        } else {
+          setStatus("Failed to load.\n"+(err&&err.message?err.message:err)+"\n\nIf this is a CORS error, the deployment access may not be \"Anyone\", or the URL is wrong.", true);
+        }
+      })
+      .finally(function(){ clearTimeout(timer); $id("refresh").disabled=false; });
   }
 
   // ---------------- undo / redo ----------------
@@ -871,10 +1838,95 @@
     else if((e.ctrlKey||e.metaKey) && ((e.key==="y"||e.key==="Y") || (e.shiftKey && (e.key==="z"||e.key==="Z")))){ e.preventDefault(); redo(); }
   });
 
+  // ---------------- export / import / clear-all ----------------
+  function reinitCounters(){
+    uid=1; smuid=1; tuid=1; tabuid=1;
+    (state.values||[]).forEach(function(v){ var n=parseInt(String(v.id).replace(/\D/g,''),10); if(n>=uid) uid=n+1; });
+    (state.savedMeasures||[]).forEach(function(m){ var n=parseInt(String(m.id).replace(/\D/g,''),10); if(n>=smuid) smuid=n+1; });
+    (((state.dash||{}).tabs)||[]).forEach(function(tb){ var tn=parseInt(String(tb.id).replace(/\D/g,''),10); if(tn>=tabuid) tabuid=tn+1; (tb.tiles||[]).forEach(function(t){ var n=parseInt(String(t.id).replace(/\D/g,''),10); if(n>=tuid) tuid=n+1; }); });
+  }
+  function freshState(){ return { rows:[],cols:[],filters:[],values:[],savedMeasures:[],exclusions:{},view:"table",chartType:"bar",sort:{key:"__row__",dir:1},totals:true,subtotals:false,collapsible:false,collapsed:{},chartOpts:{legend:true,labels:false,labelSeries:false,combo:{},kpiColor:"#003049"},mode:"builder",dash:freshDash() }; }
+
+  function exportWorkspace(){
+    var def="sse-bi-"+new Date().toISOString().slice(0,10);
+    var name=window.prompt("Name this export (downloads a .json — commit it to the site folder to share):", def);
+    if(name===null) return;
+    name=(name.trim()||def).replace(/\.json$/i,"").replace(/[^\w.\-]+/g,"_");
+    var payload={ app:"sse-bi", version:1, exportedAt:new Date().toISOString(), endpoint:$id("endpoint").value.trim(), state:state };
+    var blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"}), url=URL.createObjectURL(blob);
+    var a=document.createElement("a"); a.href=url; a.download=name+".json"; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  }
+  function applyWorkspace(payload){
+    if(!payload || typeof payload!=="object" || !payload.state) throw new Error("Not a valid SSE-BI workspace file.");
+    state=payload.state;
+    if(!state.chartOpts) state.chartOpts={legend:true,labels:false,labelSeries:false,combo:{},kpiColor:"#003049"};
+    if(!state.savedMeasures) state.savedMeasures=[];
+    if(!state.collapsed) state.collapsed={};
+    if(!state.dash || !state.dash.tabs) state.dash=freshDash();
+    reinitCounters();
+    if(payload.endpoint) $id("endpoint").value=payload.endpoint;
+    if(gridApi){ try{ gridApi.removeAll(); }catch(e){} }
+    setEditingTile(null); hist.undo=[]; hist.redo=[]; hist.last=null;
+    saveState(); renderBuckets(); applyStateToControls(); rerender(); setMode(state.mode||"builder");
+    setStatus("Workspace imported. Press <b>Refresh data</b> to pull live numbers.", false);
+  }
+  function clearEverything(){
+    if(!window.confirm("Clear EVERYTHING in this browser?\n\nPermanently deletes all saved measures, charts, dashboards and tabs. Your data source / sheet is NOT affected.")) return;
+    try{ localStorage.removeItem(LS_KEY); }catch(e){}
+    if(gridApi){ try{ gridApi.removeAll(); }catch(e){} }
+    state=freshState(); reinitCounters(); setEditingTile(null);
+    hist.undo=[]; hist.redo=[]; hist.last=null;
+    saveState(); renderBuckets(); applyStateToControls(); rerender(); setMode("builder");
+  }
+  $id("exportbtn").addEventListener("click", exportWorkspace);
+  $id("clearall").addEventListener("click", clearEverything);
+
+  // ---- import dialog (auto-lists JSON in the site's GitHub folder + file fallback) ----
+  var $imp=$("#impdlg");
+  function ghDirApiUrl(){
+    var m=/^([^.]+)\.github\.io$/i.exec(location.hostname); if(!m) return null;
+    var segs=location.pathname.split("/").filter(Boolean); if(!segs.length) return null;
+    var repo=segs[0], dirSegs=segs.slice(1);
+    if(dirSegs.length && /\.html?$/i.test(dirSegs[dirSegs.length-1])) dirSegs.pop();
+    return "https://api.github.com/repos/"+m[1]+"/"+repo+"/contents/"+dirSegs.join("/");
+  }
+  function loadGithubList(){
+    var listEl=$id("imp-list"), api=ghDirApiUrl();
+    if(!api){ listEl.innerHTML='<div style="color:var(--muted)">Folder listing works on a GitHub Pages site — use the file picker below.</div>'; return; }
+    listEl.textContent="Loading…";
+    fetch(api).then(function(r){ if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); }).then(function(items){
+      var jsons=(items||[]).filter(function(it){ return it.type==="file" && /\.json$/i.test(it.name); });
+      if(!jsons.length){ listEl.innerHTML='<div style="color:var(--muted)">No .json workspaces in this folder yet.</div>'; return; }
+      listEl.innerHTML=jsons.map(function(it){ return '<div class="imp-item" data-url="'+esc(it.download_url)+'" title="'+esc(it.name)+'">📄 '+esc(it.name)+'</div>'; }).join("");
+    }).catch(function(){ listEl.innerHTML='<div style="color:var(--muted)">Couldn’t list this folder (not GitHub, private, or API rate-limited). Use the file picker below.</div>'; });
+  }
+  function openImport(){ $id("imp-err").textContent=""; $id("imp-file").value=""; $imp.css({display:"block", top:"90px", left:Math.max(8,(window.innerWidth-400)/2)+"px"}); loadGithubList(); }
+  $id("importbtn").addEventListener("click", openImport);
+  $id("imp-cancel").addEventListener("click", function(){ $imp.hide(); });
+  $(document).on("click", "#imp-list .imp-item", function(){
+    var url=this.getAttribute("data-url"); $id("imp-err").textContent="Loading…";
+    fetch(url).then(function(r){ if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); }).then(function(p){ applyWorkspace(p); $imp.hide(); }).catch(function(e){ $id("imp-err").textContent="Failed to load: "+(e&&e.message||e); });
+  });
+  $id("imp-file").addEventListener("change", function(){
+    var f=this.files&&this.files[0]; if(!f) return;
+    var rd=new FileReader(); rd.onload=function(){ try{ applyWorkspace(JSON.parse(rd.result)); $imp.hide(); }catch(e){ $id("imp-err").textContent="Invalid file: "+(e&&e.message||e); } }; rd.readAsText(f);
+  });
+
   $id("refresh").addEventListener("click", load);
-  $id("reset").addEventListener("click", function(){ try{localStorage.removeItem(LS_KEY);}catch(e){} state={rows:[],cols:[],filters:[],values:[],exclusions:{},view:"table",chartType:"bar",sort:{key:"__row__",dir:1},totals:true,subtotals:false,chartOpts:{legend:true,labels:false,combo:{}}}; uid=1; hist.undo=[]; hist.redo=[]; hist.last=null; renderBuckets(); applyStateToControls(); load(); });
+  // "Reset layout" clears only the BUILDER working view — saved measures and the dashboard (tabs/tiles) are kept.
+  $id("reset").addEventListener("click", function(){
+    if(!window.confirm("Reset the builder layout?\n\nThis clears the fields/measures in the Builder. Your saved measures and dashboard tabs/tiles are kept.")) return;
+    clearBuilder();
+    saveState();
+  });
 
   loadState();
+  if(!state.savedMeasures) state.savedMeasures=[];
+  if(!state.dash) state.dash=freshDash();
+  // migrate old single-board dashboards (tiles/global at top level) into one tab
+  if(state.dash.tiles && !state.dash.tabs){ state.dash={ tabs:[{ id:"tab1", name:"Tab 1", tiles:state.dash.tiles||[], global:state.dash.global||{} }], activeTabId:"tab1", cols:state.dash.cols||10, cellH:state.dash.cellH||44 }; }
+  if(!state.dash.tabs || !state.dash.tabs.length){ state.dash.tabs=[{id:"tab1",name:"Tab 1",tiles:[],global:{}}]; state.dash.activeTabId="tab1"; }
+  reinitCounters();
   load();
 })();
 </script>
