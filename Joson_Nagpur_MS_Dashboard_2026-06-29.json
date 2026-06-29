@@ -1,0 +1,1255 @@
+{
+  "app": "sse-bi",
+  "version": 1,
+  "exportedAt": "2026-06-29T09:36:15.070Z",
+  "endpoint": "https://script.google.com/macros/s/AKfycbz-RkeGCheRjEZ49MuU__LhAGOpkr5o503rMSgw7WKVt8mp-e2gU4qRx4uOEcUR1TTl/exec",
+  "state": {
+    "rows": [
+      "Attributor/MS MD",
+      "Current Status",
+      "RCA"
+    ],
+    "cols": [],
+    "filters": [
+      "RTM / Non RTM",
+      "Current Status"
+    ],
+    "values": [
+      {
+        "id": "m6",
+        "kind": "base",
+        "field": "Lead Id",
+        "agg": "Count Unique"
+      }
+    ],
+    "savedMeasures": [
+      {
+        "id": "sm2",
+        "label": "Correct Allocation by LRM",
+        "expr": "COUNTUNIQUE([Lead Id], [Engine Stage] CONTAINS \"EA\" AND [MS Stage] CONTAINS \"CT\")"
+      },
+      {
+        "id": "sm4",
+        "label": "MD (excl RTM)",
+        "expr": "COUNTUNIQUE([Lead Id],[MD Stage] CONTAINS \"MD\")"
+      },
+      {
+        "id": "sm5",
+        "label": "MD - Accurate SC",
+        "expr": "COUNTUNIQUE([Lead Id], [Engine Stage] CONTAINS \"EA\" AND [MS Stage] CONTAINS \"CT\" AND [MD Stage] CONTAINS \"MD\" AND [SC Status] = \"Accurate SC\")"
+      },
+      {
+        "id": "sm6",
+        "label": "EA / MS",
+        "expr": "[Engine Allocation]/COUNTUNIQUE([Lead Id])*100"
+      },
+      {
+        "id": "sm7",
+        "label": "Engine Unallocated",
+        "expr": "COUNTUNIQUE([Lead Id],[Engine Stage] CONTAINS \"EU\")"
+      },
+      {
+        "id": "sm8",
+        "label": "Engine Allocated",
+        "expr": "COUNTUNIQUE([Lead Id], [Engine Stage] CONTAINS \"EA\")"
+      },
+      {
+        "id": "sm9",
+        "label": "EU / MS",
+        "expr": "[Engine Unallocated]/COUNTUNIQUE([Lead Id])"
+      },
+      {
+        "id": "sm10",
+        "label": "Incorrect Allocation by LRM",
+        "expr": "COUNTUNIQUE([Lead Id], [Engine Stage] CONTAINS \"EA\" AND [MS Stage] CONTAINS \"IT\")"
+      },
+      {
+        "id": "sm11",
+        "label": "No Allocation by LRM",
+        "expr": "COUNTUNIQUE([Lead Id], [Engine Stage] CONTAINS \"EA\" AND [MS Stage] CONTAINS \"NT\")"
+      },
+      {
+        "id": "sm12",
+        "label": "No MD - Correct LRM Allocation",
+        "expr": "COUNTUNIQUE([Lead Id], [Engine Stage] CONTAINS \"EA\" AND [MS Stage] CONTAINS \"CT\" AND [MD Stage] CONTAINS \"NM\")"
+      },
+      {
+        "id": "sm13",
+        "label": "MD - Inaccurate SC",
+        "expr": "COUNTUNIQUE([Lead Id], [Engine Stage] CONTAINS \"EA\" AND [MS Stage] CONTAINS \"CT\" AND [MD Stage] CONTAINS \"MD\" AND [SC Status] = \"Inaccurate SC\")"
+      },
+      {
+        "id": "sm14",
+        "label": "MD (excl RTM)",
+        "expr": "COUNTUNIQUE([Lead Id],[MD Stage] CONTAINS \"MD\")"
+      }
+    ],
+    "exclusions": {
+      "RTM / Non RTM": [
+        "RTM"
+      ],
+      "Current Status": [
+        "Meeting Done",
+        "Meeting Done Not punched"
+      ]
+    },
+    "view": "chart",
+    "chartType": "sunburst",
+    "sort": {
+      "key": "__row__",
+      "dir": 1
+    },
+    "totals": true,
+    "subtotals": false,
+    "collapsible": false,
+    "collapsed": {},
+    "chartOpts": {
+      "legend": true,
+      "labels": false,
+      "labelSeries": false,
+      "combo": {},
+      "kpiColor": "#003049"
+    },
+    "mode": "dashboard",
+    "dash": {
+      "tabs": [
+        {
+          "id": "tab1",
+          "name": "Daily Report",
+          "tiles": [
+            {
+              "id": "t1",
+              "title": "Daily Funnel",
+              "kind": "chart",
+              "cfg": {
+                "rows": [
+                  "Engine Stage",
+                  "MS Stage",
+                  "MD Stage",
+                  "SC Status"
+                ],
+                "cols": [],
+                "filters": [
+                  "Stage",
+                  "RTM / Non RTM"
+                ],
+                "values": [
+                  {
+                    "id": "m4",
+                    "kind": "base",
+                    "field": "Lead Id",
+                    "agg": "Count Unique"
+                  }
+                ],
+                "exclusions": {
+                  "RTM / Non RTM": [
+                    "RTM"
+                  ],
+                  "Stage": [
+                    "#VALUE!",
+                    "Booking Processing",
+                    "DEV Scheduled",
+                    "Future Followup Required",
+                    "Lead - Not Interested",
+                    "Lead - Not Qualified",
+                    "Meeting Done - Hot",
+                    "Meeting Done - Moderate",
+                    "Meeting Postponed",
+                    "Not found",
+                    "Order Confirmed"
+                  ]
+                },
+                "view": "chart",
+                "chartType": "sunburst",
+                "sort": {
+                  "key": "__row__",
+                  "dir": 1
+                },
+                "totals": true,
+                "subtotals": true,
+                "chartOpts": {
+                  "legend": true,
+                  "labels": false,
+                  "combo": {},
+                  "labelSeries": false
+                }
+              },
+              "x": 0,
+              "y": 0,
+              "w": 4,
+              "h": 12,
+              "xfilter": {
+                "on": false,
+                "allTargets": false,
+                "targets": []
+              },
+              "xsel": null
+            },
+            {
+              "id": "t3",
+              "title": "Leads (excl RTM)",
+              "kind": "kpi",
+              "cfg": {
+                "rows": [],
+                "cols": [],
+                "filters": [
+                  "RTM / Non RTM",
+                  "Stage"
+                ],
+                "values": [
+                  {
+                    "id": "m5",
+                    "kind": "base",
+                    "field": "Lead Id",
+                    "agg": "Count Unique",
+                    "label": "Leads"
+                  }
+                ],
+                "exclusions": {
+                  "RTM / Non RTM": [
+                    "RTM"
+                  ],
+                  "Stage": [
+                    "#VALUE!",
+                    "Booking Processing",
+                    "DEV Scheduled",
+                    "Future Followup Required",
+                    "Lead - Not Interested",
+                    "Lead - Not Qualified",
+                    "Meeting Done - Hot",
+                    "Meeting Done - Moderate",
+                    "Meeting Postponed",
+                    "Not found",
+                    "Order Confirmed"
+                  ]
+                },
+                "view": "kpi",
+                "chartType": "bar",
+                "sort": {
+                  "key": "__row__",
+                  "dir": 1
+                },
+                "totals": true,
+                "subtotals": false,
+                "collapsible": false,
+                "collapsed": {},
+                "chartOpts": {
+                  "legend": true,
+                  "labels": false,
+                  "labelSeries": false,
+                  "combo": {}
+                }
+              },
+              "x": 4,
+              "y": 0,
+              "w": 2,
+              "h": 4
+            },
+            {
+              "id": "t4",
+              "title": "Correct Allocation by LRM",
+              "kind": "kpi",
+              "cfg": {
+                "rows": [],
+                "cols": [],
+                "filters": [
+                  "RTM / Non RTM",
+                  "Stage"
+                ],
+                "values": [
+                  {
+                    "id": "m6",
+                    "kind": "calc",
+                    "label": "Correct Allocation by LRM",
+                    "expr": "COUNTUNIQUE([Lead Id], [Engine Stage] CONTAINS \"EA\" AND [MS Stage] CONTAINS \"CT\")"
+                  },
+                  {
+                    "id": "m7",
+                    "kind": "calc",
+                    "label": "% of EA",
+                    "expr": "[Correct Allocation by LRM]/[Engine Allocated]*100"
+                  }
+                ],
+                "exclusions": {
+                  "RTM / Non RTM": [
+                    "RTM"
+                  ],
+                  "Stage": [
+                    "#VALUE!",
+                    "Booking Processing",
+                    "DEV Scheduled",
+                    "Future Followup Required",
+                    "Lead - Not Interested",
+                    "Lead - Not Qualified",
+                    "Meeting Done - Hot",
+                    "Meeting Done - Moderate",
+                    "Meeting Postponed",
+                    "Not found",
+                    "Order Confirmed"
+                  ]
+                },
+                "view": "kpi",
+                "chartType": "bar",
+                "sort": {
+                  "key": "__row__",
+                  "dir": 1
+                },
+                "totals": true,
+                "subtotals": false,
+                "collapsible": false,
+                "collapsed": {},
+                "chartOpts": {
+                  "legend": true,
+                  "labels": false,
+                  "labelSeries": false,
+                  "combo": {}
+                }
+              },
+              "x": 4,
+              "y": 4,
+              "w": 2,
+              "h": 4
+            },
+            {
+              "id": "t5",
+              "title": "MD - Accurate SC",
+              "kind": "kpi",
+              "cfg": {
+                "rows": [],
+                "cols": [],
+                "filters": [
+                  "RTM / Non RTM",
+                  "Stage"
+                ],
+                "values": [
+                  {
+                    "id": "m8",
+                    "kind": "calc",
+                    "label": "MD - Accurate SC",
+                    "expr": "COUNTUNIQUE([Lead Id], [Engine Stage] CONTAINS \"EA\" AND [MS Stage] CONTAINS \"CT\" AND [MD Stage] CONTAINS \"MD\" AND [SC Status] = \"Accurate SC\")"
+                  },
+                  {
+                    "id": "m9",
+                    "kind": "calc",
+                    "label": "% of EA",
+                    "expr": "[MD - Accurate SC]/[Engine Allocated]*100"
+                  }
+                ],
+                "exclusions": {
+                  "RTM / Non RTM": [
+                    "RTM"
+                  ],
+                  "Stage": [
+                    "#VALUE!",
+                    "Booking Processing",
+                    "DEV Scheduled",
+                    "Future Followup Required",
+                    "Lead - Not Interested",
+                    "Lead - Not Qualified",
+                    "Meeting Done - Hot",
+                    "Meeting Done - Moderate",
+                    "Meeting Postponed",
+                    "Not found",
+                    "Order Confirmed"
+                  ]
+                },
+                "view": "kpi",
+                "chartType": "bar",
+                "sort": {
+                  "key": "__row__",
+                  "dir": 1
+                },
+                "totals": true,
+                "subtotals": false,
+                "collapsible": false,
+                "collapsed": {},
+                "chartOpts": {
+                  "legend": true,
+                  "labels": false,
+                  "labelSeries": false,
+                  "combo": {}
+                }
+              },
+              "x": 4,
+              "y": 8,
+              "w": 2,
+              "h": 4
+            },
+            {
+              "id": "t11",
+              "title": "Lead-wise Table",
+              "kind": "table",
+              "cfg": {
+                "rows": [
+                  "Engine Stage",
+                  "MS Stage",
+                  "MD Stage",
+                  "SC Status"
+                ],
+                "cols": [],
+                "filters": [
+                  "RTM / Non RTM",
+                  "Stage"
+                ],
+                "values": [
+                  {
+                    "id": "m7",
+                    "kind": "base",
+                    "field": "Lead Id",
+                    "agg": "Count Unique"
+                  }
+                ],
+                "exclusions": {
+                  "RTM / Non RTM": [
+                    "RTM"
+                  ],
+                  "Stage": [
+                    "#VALUE!",
+                    "Booking Processing",
+                    "DEV Scheduled",
+                    "Future Followup Required",
+                    "Lead - Not Interested",
+                    "Lead - Not Qualified",
+                    "Meeting Done - Hot",
+                    "Meeting Done - Moderate",
+                    "Meeting Postponed",
+                    "Not found",
+                    "Order Confirmed"
+                  ]
+                },
+                "view": "table",
+                "chartType": "bar",
+                "sort": {
+                  "key": "__row__",
+                  "dir": 1
+                },
+                "totals": true,
+                "subtotals": true,
+                "collapsible": true,
+                "collapsed": {
+                  "EA␟CT␟NM": true,
+                  "EA␟IT␟MD": true,
+                  "EA␟IT␟NM": true,
+                  "EU␟IT␟MD": true,
+                  "EU␟IT␟NM": true,
+                  "NP": true,
+                  "EU": true,
+                  "EA␟NT␟NM": true,
+                  "EA␟NT␟MD": true,
+                  "EA␟NT": true
+                },
+                "chartOpts": {
+                  "legend": true,
+                  "labels": false,
+                  "labelSeries": false,
+                  "combo": {},
+                  "kpiColor": "#C1121F"
+                }
+              },
+              "x": 0,
+              "y": 12,
+              "w": 4,
+              "h": 12
+            },
+            {
+              "id": "t16",
+              "title": "Engine Unallocated",
+              "kind": "kpi",
+              "cfg": {
+                "rows": [],
+                "cols": [],
+                "filters": [
+                  "Stage",
+                  "RTM / Non RTM"
+                ],
+                "values": [
+                  {
+                    "id": "m10",
+                    "kind": "ref",
+                    "smId": "sm7"
+                  },
+                  {
+                    "id": "m9",
+                    "kind": "calc",
+                    "label": "% of MS",
+                    "expr": "[Engine Unallocated]/COUNTUNIQUE([Lead Id])*100"
+                  }
+                ],
+                "exclusions": {
+                  "Stage": [
+                    "#VALUE!",
+                    "Booking Processing",
+                    "DEV Scheduled",
+                    "Future Followup Required",
+                    "Lead - Not Interested",
+                    "Lead - Not Qualified",
+                    "Meeting Done - Hot",
+                    "Meeting Done - Moderate",
+                    "Meeting Postponed",
+                    "Not found",
+                    "Order Confirmed"
+                  ],
+                  "RTM / Non RTM": [
+                    "RTM"
+                  ]
+                },
+                "view": "kpi",
+                "chartType": "bar",
+                "sort": {
+                  "key": "__row__",
+                  "dir": 1
+                },
+                "totals": true,
+                "subtotals": false,
+                "collapsible": false,
+                "collapsed": {},
+                "chartOpts": {
+                  "legend": true,
+                  "labels": false,
+                  "labelSeries": false,
+                  "combo": {},
+                  "kpiColor": "#C1121F"
+                }
+              },
+              "x": 8,
+              "y": 0,
+              "w": 2,
+              "h": 4
+            },
+            {
+              "id": "t17",
+              "title": "Engine Allocated",
+              "kind": "kpi",
+              "cfg": {
+                "rows": [],
+                "cols": [],
+                "filters": [
+                  "Stage",
+                  "RTM / Non RTM"
+                ],
+                "values": [
+                  {
+                    "id": "m11",
+                    "kind": "ref",
+                    "smId": "sm8"
+                  },
+                  {
+                    "id": "m12",
+                    "kind": "calc",
+                    "label": "% of MS",
+                    "expr": "[Engine Allocated]/COUNTUNIQUE([Lead Id])*100"
+                  }
+                ],
+                "exclusions": {
+                  "Stage": [
+                    "#VALUE!",
+                    "Booking Processing",
+                    "DEV Scheduled",
+                    "Future Followup Required",
+                    "Lead - Not Interested",
+                    "Lead - Not Qualified",
+                    "Meeting Done - Hot",
+                    "Meeting Done - Moderate",
+                    "Meeting Postponed",
+                    "Not found",
+                    "Order Confirmed"
+                  ],
+                  "RTM / Non RTM": [
+                    "RTM"
+                  ]
+                },
+                "view": "kpi",
+                "chartType": "bar",
+                "sort": {
+                  "key": "__row__",
+                  "dir": 1
+                },
+                "totals": true,
+                "subtotals": false,
+                "collapsible": false,
+                "collapsed": {},
+                "chartOpts": {
+                  "legend": true,
+                  "labels": false,
+                  "labelSeries": false,
+                  "combo": {},
+                  "kpiColor": "#003049"
+                }
+              },
+              "x": 6,
+              "y": 0,
+              "w": 2,
+              "h": 4
+            },
+            {
+              "id": "t18",
+              "title": "Inorrect Allocation by LRM",
+              "kind": "kpi",
+              "cfg": {
+                "rows": [],
+                "cols": [],
+                "filters": [
+                  "RTM / Non RTM",
+                  "Stage"
+                ],
+                "values": [
+                  {
+                    "id": "m8",
+                    "kind": "ref",
+                    "smId": "sm10"
+                  },
+                  {
+                    "id": "m9",
+                    "kind": "calc",
+                    "label": "% of MS",
+                    "expr": "[Incorrect Allocation by LRM]/[Engine Allocated]*100"
+                  }
+                ],
+                "exclusions": {
+                  "RTM / Non RTM": [
+                    "RTM"
+                  ],
+                  "Stage": [
+                    "#VALUE!",
+                    "Booking Processing",
+                    "DEV Scheduled",
+                    "Future Followup Required",
+                    "Lead - Not Interested",
+                    "Lead - Not Qualified",
+                    "Meeting Done - Hot",
+                    "Meeting Done - Moderate",
+                    "Meeting Postponed",
+                    "Not found",
+                    "Order Confirmed"
+                  ]
+                },
+                "view": "kpi",
+                "chartType": "bar",
+                "sort": {
+                  "key": "__row__",
+                  "dir": 1
+                },
+                "totals": true,
+                "subtotals": false,
+                "collapsible": false,
+                "collapsed": {},
+                "chartOpts": {
+                  "legend": true,
+                  "labels": false,
+                  "labelSeries": false,
+                  "combo": {},
+                  "kpiColor": "#C1121F"
+                }
+              },
+              "x": 6,
+              "y": 4,
+              "w": 2,
+              "h": 4
+            },
+            {
+              "id": "t19",
+              "title": "No Allocation by LRM",
+              "kind": "kpi",
+              "cfg": {
+                "rows": [],
+                "cols": [],
+                "filters": [
+                  "RTM / Non RTM",
+                  "Stage"
+                ],
+                "values": [
+                  {
+                    "id": "m9",
+                    "kind": "ref",
+                    "smId": "sm11"
+                  },
+                  {
+                    "id": "m10",
+                    "kind": "calc",
+                    "label": "% of EA",
+                    "expr": "[No Allocation by LRM]/[Engine Allocated]"
+                  }
+                ],
+                "exclusions": {
+                  "RTM / Non RTM": [
+                    "RTM"
+                  ],
+                  "Stage": [
+                    "#VALUE!",
+                    "Booking Processing",
+                    "DEV Scheduled",
+                    "Future Followup Required",
+                    "Lead - Not Interested",
+                    "Lead - Not Qualified",
+                    "Meeting Done - Hot",
+                    "Meeting Done - Moderate",
+                    "Meeting Postponed",
+                    "Not found",
+                    "Order Confirmed"
+                  ]
+                },
+                "view": "kpi",
+                "chartType": "bar",
+                "sort": {
+                  "key": "__row__",
+                  "dir": 1
+                },
+                "totals": true,
+                "subtotals": false,
+                "collapsible": false,
+                "collapsed": {},
+                "chartOpts": {
+                  "legend": true,
+                  "labels": false,
+                  "labelSeries": false,
+                  "combo": {},
+                  "kpiColor": "#C1121F"
+                }
+              },
+              "x": 8,
+              "y": 4,
+              "w": 2,
+              "h": 4
+            },
+            {
+              "id": "t20",
+              "title": "MD - Inaccurate SC",
+              "kind": "kpi",
+              "cfg": {
+                "rows": [],
+                "cols": [],
+                "filters": [
+                  "RTM / Non RTM",
+                  "Stage"
+                ],
+                "values": [
+                  {
+                    "id": "m12",
+                    "kind": "ref",
+                    "smId": "sm13"
+                  },
+                  {
+                    "id": "m11",
+                    "kind": "calc",
+                    "label": "% of EA",
+                    "expr": "[MD - Inaccurate SC]/[Engine Allocated]*100"
+                  }
+                ],
+                "exclusions": {
+                  "RTM / Non RTM": [
+                    "RTM"
+                  ],
+                  "Stage": [
+                    "#VALUE!",
+                    "Booking Processing",
+                    "DEV Scheduled",
+                    "Future Followup Required",
+                    "Lead - Not Interested",
+                    "Lead - Not Qualified",
+                    "Meeting Done - Hot",
+                    "Meeting Done - Moderate",
+                    "Meeting Postponed",
+                    "Not found",
+                    "Order Confirmed"
+                  ]
+                },
+                "view": "kpi",
+                "chartType": "bar",
+                "sort": {
+                  "key": "__row__",
+                  "dir": 1
+                },
+                "totals": true,
+                "subtotals": false,
+                "collapsible": false,
+                "collapsed": {},
+                "chartOpts": {
+                  "legend": true,
+                  "labels": false,
+                  "labelSeries": false,
+                  "combo": {},
+                  "kpiColor": "#C1121F"
+                }
+              },
+              "x": 6,
+              "y": 8,
+              "w": 2,
+              "h": 4
+            },
+            {
+              "id": "t22",
+              "title": "No MD - Correct Allocation",
+              "kind": "kpi",
+              "cfg": {
+                "rows": [],
+                "cols": [],
+                "filters": [
+                  "RTM / Non RTM",
+                  "Stage"
+                ],
+                "values": [
+                  {
+                    "id": "m10",
+                    "kind": "ref",
+                    "smId": "sm12"
+                  },
+                  {
+                    "id": "m11",
+                    "kind": "calc",
+                    "label": "% of EA",
+                    "expr": "[No MD - Correct LRM Allocation]/[Engine Allocated]*100"
+                  }
+                ],
+                "exclusions": {
+                  "RTM / Non RTM": [
+                    "RTM"
+                  ],
+                  "Stage": [
+                    "#VALUE!",
+                    "Booking Processing",
+                    "DEV Scheduled",
+                    "Future Followup Required",
+                    "Lead - Not Interested",
+                    "Lead - Not Qualified",
+                    "Meeting Done - Hot",
+                    "Meeting Done - Moderate",
+                    "Meeting Postponed",
+                    "Not found",
+                    "Order Confirmed"
+                  ]
+                },
+                "view": "kpi",
+                "chartType": "bar",
+                "sort": {
+                  "key": "__row__",
+                  "dir": 1
+                },
+                "totals": true,
+                "subtotals": false,
+                "collapsible": false,
+                "collapsed": {},
+                "chartOpts": {
+                  "legend": true,
+                  "labels": false,
+                  "labelSeries": false,
+                  "combo": {},
+                  "kpiColor": "#C1121F"
+                }
+              },
+              "x": 8,
+              "y": 8,
+              "w": 2,
+              "h": 4
+            },
+            {
+              "id": "t25",
+              "title": "Control Tower",
+              "kind": "chart",
+              "cfg": {
+                "rows": [
+                  "Attributor/MS MD",
+                  "Current Status",
+                  "RCA"
+                ],
+                "cols": [],
+                "filters": [
+                  "RTM / Non RTM",
+                  "Current Status"
+                ],
+                "values": [
+                  {
+                    "id": "m6",
+                    "kind": "base",
+                    "field": "Lead Id",
+                    "agg": "Count Unique"
+                  }
+                ],
+                "exclusions": {
+                  "RTM / Non RTM": [
+                    "RTM"
+                  ],
+                  "Current Status": [
+                    "Meeting Done",
+                    "Meeting Done Not punched"
+                  ]
+                },
+                "view": "chart",
+                "chartType": "sunburst",
+                "sort": {
+                  "key": "__row__",
+                  "dir": 1
+                },
+                "totals": true,
+                "subtotals": false,
+                "collapsible": false,
+                "collapsed": {},
+                "chartOpts": {
+                  "legend": true,
+                  "labels": false,
+                  "labelSeries": false,
+                  "combo": {},
+                  "kpiColor": "#003049"
+                }
+              },
+              "x": 4,
+              "y": 12,
+              "w": 4,
+              "h": 12,
+              "xfilter": {
+                "on": true,
+                "allTargets": true,
+                "targets": []
+              },
+              "xsel": null
+            }
+          ],
+          "global": {
+            "MS": [
+              "",
+              "01-05-2026",
+              "01-06-2026",
+              "02-05-2026",
+              "02-06-2026",
+              "03-05-2026",
+              "03-06-2026",
+              "04-05-2026",
+              "04-06-2026",
+              "05-05-2026",
+              "05-06-2026",
+              "06-05-2026",
+              "06-06-2026",
+              "07-05-2026",
+              "07-06-2026",
+              "08-05-2026",
+              "08-06-2026",
+              "09-05-2026",
+              "09-06-2026",
+              "10-05-2026",
+              "10-06-2026",
+              "11-05-2026",
+              "11-06-2026",
+              "12-05-2026",
+              "12-06-2026",
+              "13-05-2026",
+              "13-06-2026",
+              "14-05-2026",
+              "14-06-2026",
+              "15-05-2026",
+              "15-06-2026",
+              "16-05-2026",
+              "16-06-2026",
+              "17-05-2026",
+              "17-06-2026",
+              "18-05-2026",
+              "18-06-2026",
+              "19-05-2026",
+              "19-06-2026",
+              "20-05-2026",
+              "20-06-2026",
+              "21-05-2026",
+              "22-05-2026",
+              "22-06-2026",
+              "23-05-2026",
+              "24-05-2026",
+              "25-05-2026",
+              "26-05-2026",
+              "27-05-2026",
+              "28-05-2026",
+              "29-05-2026",
+              "30-05-2026",
+              "31-05-2026",
+              "21-06-2026",
+              "23-06-2026",
+              "24-06-2026",
+              "25-06-2026",
+              "26-06-2026",
+              "28-06-2026",
+              "29-06-2026"
+            ]
+          }
+        },
+        {
+          "id": "tab3",
+          "name": "Weekly Report",
+          "tiles": [
+            {
+              "id": "t7",
+              "title": "Funnel",
+              "kind": "chart",
+              "cfg": {
+                "rows": [
+                  "MS"
+                ],
+                "cols": [],
+                "filters": [
+                  "RTM / Non RTM",
+                  "Stage"
+                ],
+                "values": [
+                  {
+                    "id": "m6",
+                    "kind": "base",
+                    "field": "Lead Id",
+                    "agg": "Count"
+                  },
+                  {
+                    "id": "m5",
+                    "kind": "calc",
+                    "label": "Engine Allocation",
+                    "expr": "COUNTUNIQUE([Lead Id], [Engine Stage] CONTAINS \"EA\")"
+                  },
+                  {
+                    "id": "m8",
+                    "kind": "calc",
+                    "label": "Correct Allocation by LRM",
+                    "expr": "COUNTUNIQUE([Lead Id], [Engine Stage] CONTAINS \"EA\" AND [MS Stage] CONTAINS \"CT\")"
+                  },
+                  {
+                    "id": "m9",
+                    "kind": "calc",
+                    "label": "MD - Accurate SC",
+                    "expr": "COUNTUNIQUE([Lead Id], [Engine Stage] CONTAINS \"EA\" AND [MS Stage] CONTAINS \"CT\" AND [MD Stage] CONTAINS \"MD\" AND [SC Status] = \"Accurate SC\")"
+                  }
+                ],
+                "exclusions": {
+                  "Stage": [
+                    "#VALUE!",
+                    "Booking Processing",
+                    "DEV Scheduled",
+                    "Future Followup Required",
+                    "Lead - Not Interested",
+                    "Lead - Not Qualified",
+                    "Meeting Done - Hot",
+                    "Meeting Done - Moderate",
+                    "Meeting Postponed",
+                    "Not found",
+                    "Order Confirmed"
+                  ],
+                  "RTM / Non RTM": [
+                    "RTM"
+                  ]
+                },
+                "view": "chart",
+                "chartType": "bar",
+                "sort": {
+                  "key": "__row__",
+                  "dir": 1
+                },
+                "totals": true,
+                "subtotals": false,
+                "chartOpts": {
+                  "legend": true,
+                  "labels": true,
+                  "labelSeries": false,
+                  "combo": {}
+                }
+              },
+              "x": 0,
+              "y": 0,
+              "w": 6,
+              "h": 12,
+              "xfilter": {
+                "on": true,
+                "allTargets": true,
+                "targets": []
+              },
+              "xsel": null
+            },
+            {
+              "id": "t14",
+              "title": "Funnel",
+              "kind": "table",
+              "cfg": {
+                "rows": [
+                  "Engine Stage",
+                  "MS Stage",
+                  "MD Stage",
+                  "SC Status"
+                ],
+                "cols": [
+                  "MS"
+                ],
+                "filters": [
+                  "RTM / Non RTM",
+                  "Stage"
+                ],
+                "values": [
+                  {
+                    "id": "m1",
+                    "kind": "base",
+                    "field": "Lead Id",
+                    "agg": "Count Unique"
+                  }
+                ],
+                "exclusions": {
+                  "RTM / Non RTM": [
+                    "RTM"
+                  ],
+                  "Stage": [
+                    "#VALUE!",
+                    "Booking Processing",
+                    "DEV Scheduled",
+                    "Future Followup Required",
+                    "Lead - Not Interested",
+                    "Lead - Not Qualified",
+                    "Meeting Done - Hot",
+                    "Meeting Done - Moderate",
+                    "Meeting Postponed",
+                    "Not found",
+                    "Order Confirmed"
+                  ]
+                },
+                "view": "table",
+                "chartType": "bar",
+                "sort": {
+                  "key": "__row__",
+                  "dir": 1
+                },
+                "totals": true,
+                "subtotals": false,
+                "collapsible": true,
+                "collapsed": {
+                  "EA␟IT␟MD": true,
+                  "EA␟CT␟NM": true,
+                  "EA␟IT␟NM": true,
+                  "EA␟NT␟MD": true,
+                  "EA␟NT␟NM": true,
+                  "EU": true,
+                  "NP": true
+                },
+                "chartOpts": {
+                  "legend": true,
+                  "labels": false,
+                  "labelSeries": false,
+                  "combo": {},
+                  "kpiColor": "#003049"
+                }
+              },
+              "x": 0,
+              "y": 12,
+              "w": 10,
+              "h": 15
+            },
+            {
+              "id": "t26",
+              "title": "Leads (excl RTM)",
+              "kind": "kpi",
+              "cfg": {
+                "rows": [],
+                "cols": [],
+                "filters": [
+                  "RTM / Non RTM",
+                  "Stage"
+                ],
+                "values": [
+                  {
+                    "id": "m5",
+                    "kind": "base",
+                    "field": "Lead Id",
+                    "agg": "Count Unique",
+                    "label": "Leads"
+                  }
+                ],
+                "exclusions": {
+                  "RTM / Non RTM": [
+                    "RTM"
+                  ],
+                  "Stage": [
+                    "#VALUE!",
+                    "Booking Processing",
+                    "DEV Scheduled",
+                    "Future Followup Required",
+                    "Lead - Not Interested",
+                    "Lead - Not Qualified",
+                    "Meeting Done - Hot",
+                    "Meeting Done - Moderate",
+                    "Meeting Postponed",
+                    "Not found",
+                    "Order Confirmed"
+                  ]
+                },
+                "view": "kpi",
+                "chartType": "bar",
+                "sort": {
+                  "key": "__row__",
+                  "dir": 1
+                },
+                "totals": true,
+                "subtotals": false,
+                "collapsible": false,
+                "collapsed": {},
+                "chartOpts": {
+                  "legend": true,
+                  "labels": false,
+                  "labelSeries": false,
+                  "combo": {}
+                }
+              },
+              "x": 6,
+              "y": 0,
+              "w": 2,
+              "h": 4
+            }
+          ],
+          "global": {
+            "MS": [
+              "",
+              "01-05-2026",
+              "02-05-2026",
+              "03-05-2026",
+              "04-05-2026",
+              "05-05-2026",
+              "06-05-2026",
+              "07-05-2026",
+              "08-05-2026",
+              "09-05-2026",
+              "10-05-2026",
+              "11-05-2026",
+              "12-05-2026",
+              "13-05-2026",
+              "14-05-2026",
+              "15-05-2026",
+              "16-05-2026",
+              "17-05-2026",
+              "18-05-2026",
+              "19-05-2026",
+              "20-05-2026",
+              "21-05-2026",
+              "22-05-2026",
+              "23-05-2026",
+              "24-05-2026",
+              "25-05-2026",
+              "26-05-2026",
+              "27-05-2026",
+              "28-05-2026",
+              "29-05-2026",
+              "30-05-2026",
+              "31-05-2026",
+              "01-06-2026",
+              "02-06-2026",
+              "03-06-2026",
+              "04-06-2026",
+              "05-06-2026",
+              "06-06-2026",
+              "07-06-2026",
+              "08-06-2026",
+              "09-06-2026",
+              "10-06-2026",
+              "11-06-2026",
+              "12-06-2026",
+              "13-06-2026",
+              "14-06-2026",
+              "15-06-2026",
+              "22-06-2026",
+              "16-06-2026",
+              "17-06-2026"
+            ]
+          }
+        }
+      ],
+      "activeTabId": "tab1",
+      "cols": 10,
+      "cellH": 44
+    }
+  }
+}
