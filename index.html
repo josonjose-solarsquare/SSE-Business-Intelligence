@@ -49,6 +49,12 @@
   .field-row .adds { display:flex; gap:3px; opacity:0; visibility:hidden; transition:opacity .12s; }
   .field-row:hover .adds, .field-row:focus-within .adds { opacity:1; visibility:visible; }
   .field-row .adds button { padding:1px 6px; font-size:13px; line-height:1.4; }
+  .field-row .dtoggle { flex:0 0 auto; width:12px; cursor:pointer; color:var(--muted); font-size:11px; user-select:none; text-align:center; }
+  .field-row .dtoggle:hover { color:var(--accent); }
+  .field-row.has-hier .fname::after { content:"📅"; font-size:11px; margin-left:5px; opacity:.6; }
+  .date-parts .field-row.sub { padding-left:20px; }
+  .date-parts .field-row.sub .fname { color:var(--muted); font-size:13px; }
+  .date-parts .field-row.sub .fname::before { content:"▸"; margin-right:5px; opacity:.6; }
 
   /* buckets */
   .bucket-list { list-style:none; margin:0; padding:7px; min-height:40px; border:1px dashed var(--border); border-radius:var(--radius-sm); background:var(--bg); }
@@ -477,6 +483,8 @@
   // ---------------- aggregation ----------------
   function numList(grp, idx){ var out=[]; for(var i=0;i<grp.length;i++){ var n=Number(grp[i][idx]); if(grp[i][idx]!=="" && grp[i][idx]!==null && isFinite(n)) out.push(n); } return out; }
   function aggOne(fn, field, grp){
+    var _tp=parseFieldToken(field);
+    if(_tp.part) return aggDatePart(fn, _tp.base, _tp.part, grp);
     var idx = fieldIndex[field];
     if(idx===undefined) throw new Error("Unknown field: "+field);
     fn = fn.toUpperCase();
@@ -606,16 +614,65 @@
   function measureLabel(m){
     if(m.label) return m.label;  // per-visual display override (works for base, calc and ref — without detaching a ref)
     if(m.kind==="ref"){ var sm=findSaved(m.smId); return sm? sm.label : "(removed measure)"; }
-    return (m.kind==="calc") ? "(measure)" : (m.agg+" of "+m.field);
+    return (m.kind==="calc") ? "(measure)" : (m.agg+" of "+fieldLabel(m.field));
   }
 
   function fmt(v){ if(v===null||v===undefined||Number.isNaN(v)) return ""; if(!isFinite(v)) return "∞"; var n=Number(v); return Number.isInteger(n)? n.toLocaleString() : n.toLocaleString(undefined,{maximumFractionDigits:2}); }
 
   // Display formatting for labels: blanks -> "(blank)", ISO datetimes -> readable (no tz shift, components taken literally).
   var ISO_RE=/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}):\d{2}/;
-  function dispLabel(v){ if(v===""||v===null||v===undefined) return "(blank)"; var m=ISO_RE.exec(v); if(m){ return m[2]==="00:00"? m[1] : m[1]+" "+m[2]; } return String(v); }
+  function dispLabel(v){
+    if(v===""||v===null||v===undefined) return "(blank)";
+    var m=ISO_RE.exec(v); if(m){ return m[2]==="00:00"? m[1] : m[1]+" "+m[2]; }
+    var q=/^(\d{4})-Q([1-4])$/.exec(v); if(q) return "Q"+q[2]+" "+q[1];                              // 2026-Q1 -> Q1 2026
+    var mo=/^(\d{4})-(0[1-9]|1[0-2])$/.exec(v); if(mo) return MONTHS[+mo[2]-1]+" "+mo[1];             // 2026-03 -> Mar 2026
+    var dd=/^(\d{4})-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.exec(v); if(dd) return (+dd[3])+" "+MONTHS[+dd[2]-1]+" "+dd[1]; // 2026-03-05 -> 5 Mar 2026
+    return String(v);
+  }
 
   function cmpTuple(a,b){ for(var i=0;i<a.length;i++){ var x=a[i]||"",y=b[i]||""; var nx=/^-?\d+(\.\d+)?$/.test(x), ny=/^-?\d+(\.\d+)?$/.test(y); var c = (nx&&ny)? (parseFloat(x)-parseFloat(y)) : x.localeCompare(y); if(c) return c; } return 0; }
+
+  // ---- date hierarchy in Rows/Columns/Values ----
+  // A row/col/value "field" can be a plain header name OR a derived date-part TOKEN: base + DPART_SEP + part.
+  // Tokens resolve to a chronologically-sortable string per row (Year/Quarter/Month/Day); dispLabel prettifies them.
+  var DPART_SEP = "⟨▸⟩"; // ⟨▸⟩ — unlikely to appear in real field names
+  var DATE_PARTS = ["Year","Quarter","Month","Day"];
+  function parseFieldToken(tok){ tok=String(tok); var i=tok.indexOf(DPART_SEP); return i<0 ? {base:tok, part:null} : {base:tok.slice(0,i), part:tok.slice(i+DPART_SEP.length)}; }
+  function makeDateToken(base, part){ return base + DPART_SEP + part; }
+  function fieldLabel(tok){ var p=parseFieldToken(tok); return p.part ? (p.base + " (" + p.part + ")") : p.base; }
+  function datePartValue(raw, part){
+    var t=parseDateVal(raw); if(t===null) return "";
+    var d=new Date(t), y=d.getUTCFullYear(), m=d.getUTCMonth();
+    if(part==="Year") return String(y);
+    if(part==="Quarter") return y + "-Q" + (Math.floor(m/3)+1);
+    if(part==="Month") return y + "-" + pad2(m+1);
+    if(part==="Day") return y + "-" + pad2(m+1) + "-" + pad2(d.getUTCDate());
+    return "";
+  }
+  // grouping value for a row/col field token (always a string; "" for blanks/unparseable dates)
+  function tokenValue(row, tok){
+    var p=parseFieldToken(tok), idx=fieldIndex[p.base];
+    var raw=(idx===undefined)?"":row[idx]; raw=(raw===null||raw===undefined)?"":String(raw);
+    return p.part ? datePartValue(raw, p.part) : raw;
+  }
+  // aggregate a date-part token used as a measure field
+  function aggDatePart(fn, base, part, grp){
+    var idx=fieldIndex[base]; if(idx===undefined) throw new Error("Unknown field: "+base);
+    fn=fn.toUpperCase();
+    var vals=[]; for(var i=0;i<grp.length;i++){ var dv=datePartValue(_s(grp[i][idx]), part); if(dv!=="") vals.push(dv); }
+    if(fn==="COUNT") return vals.length;
+    if(fn==="COUNTUNIQUE"){ var s=new Set(vals); return s.size; }
+    var nums=[]; for(var k=0;k<vals.length;k++){ var n=Number(vals[k]); if(isFinite(n)) nums.push(n); } // only Year is numeric
+    if(fn==="COUNTNUMBERS") return nums.length;
+    if(nums.length===0) return null;
+    var sum=0; for(var j=0;j<nums.length;j++) sum+=nums[j];
+    if(fn==="SUM") return sum;
+    if(fn==="AVG"||fn==="AVERAGE") return sum/nums.length;
+    if(fn==="MIN") return Math.min.apply(null,nums);
+    if(fn==="MAX") return Math.max.apply(null,nums);
+    if(fn==="STDEV"||fn==="VAR"){ var mean=sum/nums.length, sq=0; for(var x=0;x<nums.length;x++){ var dd=nums[x]-mean; sq+=dd*dd; } var vv=nums.length>1?sq/(nums.length-1):0; return fn==="VAR"?vv:Math.sqrt(vv); }
+    throw new Error("Unknown function: "+fn);
+  }
 
   // ---------------- compute pivot ----------------
   // CTX is the config currently being rendered (the builder `state`, or a dashboard tile's
@@ -635,7 +692,7 @@
       if(ok) filtered.push(row);
     }
 
-    function keyOf(row, fields){ var t=[]; for(var k=0;k<fields.length;k++){ var v=row[fieldIndex[fields[k]]]; t.push((v===null||v===undefined)?"":String(v)); } return t; }
+    function keyOf(row, fields){ var t=[]; for(var k=0;k<fields.length;k++){ t.push(tokenValue(row, fields[k])); } return t; }
 
     var cell={}, rowGrp={}, colGrp={}, rkMeta={}, ckMeta={};
     for(var r=0;r<filtered.length;r++){
@@ -671,7 +728,7 @@
     if(nMeas===0){
       if(!rf.length){ el.innerHTML='<div class="empty-note">Add a Row field to list values, or a measure.</div>'; return; }
       var h0='<div class="table-scroll"><table class="pivot"><thead><tr>';
-      rf.forEach(function(f){ h0+='<th class="rowhdr">'+esc(f)+'</th>'; });
+      rf.forEach(function(f){ h0+='<th class="rowhdr">'+esc(fieldLabel(f))+'</th>'; });
       h0+='</tr></thead><tbody>';
       rKeys.forEach(function(rk){ h0+='<tr>'; P.rkMeta[rk].forEach(function(v){ h0+='<td class="rowlbl">'+esc(dispLabel(v))+'</td>'; }); h0+='</tr>'; });
       h0+='</tbody></table></div>';
@@ -684,7 +741,7 @@
 
     var cornerCols=collapsible?1:Math.max(rf.length,1);
     var headerRows=cf.length + 1; // one row per col field level + measure row
-    var cornerTxt=(rf.length? esc(rf.join(" / ")):"")+rowArrow();
+    var cornerTxt=(rf.length? esc(rf.map(fieldLabel).join(" / ")):"")+rowArrow();
 
     // column field level rows
     for(var lvl=0; lvl<cf.length; lvl++){
@@ -727,8 +784,8 @@
     if(collapsible){
       // build prefix maps for ALL levels 1..rf.length (each node shows its group aggregate)
       P.filtered.forEach(function(row){
-        var rt=[]; for(var c=0;c<rf.length;c++){ var v=row[fieldIndex[rf[c]]]; rt.push((v===null||v===undefined)?"":String(v)); }
-        var ct=[]; for(var c2=0;c2<cf.length;c2++){ var v2=row[fieldIndex[cf[c2]]]; ct.push((v2===null||v2===undefined)?"":String(v2)); }
+        var rt=[]; for(var c=0;c<rf.length;c++){ rt.push(tokenValue(row, rf[c])); }
+        var ct=[]; for(var c2=0;c2<cf.length;c2++){ ct.push(tokenValue(row, cf[c2])); }
         var ck=ct.join(SEP);
         for(var L=1; L<=rf.length; L++){ var pk=rt.slice(0,L).join(SEP); var o=pcell[pk]||(pcell[pk]={}); (o[ck]||(o[ck]=[])).push(row); (pall[pk]||(pall[pk]=[])).push(row); }
       });
@@ -777,8 +834,8 @@
       var ordered=rKeys.slice().sort(function(a,b){ return cmpTuple(P.rkMeta[a],P.rkMeta[b]); });
       // build prefix maps (prefix lengths 1..rf.length-1 are the non-leaf groups that get subtotals)
       P.filtered.forEach(function(row){
-        var rt=[]; for(var c=0;c<rf.length;c++){ var v=row[fieldIndex[rf[c]]]; rt.push((v===null||v===undefined)?"":String(v)); }
-        var ct=[]; for(var c2=0;c2<cf.length;c2++){ var v2=row[fieldIndex[cf[c2]]]; ct.push((v2===null||v2===undefined)?"":String(v2)); }
+        var rt=[]; for(var c=0;c<rf.length;c++){ rt.push(tokenValue(row, rf[c])); }
+        var ct=[]; for(var c2=0;c2<cf.length;c2++){ ct.push(tokenValue(row, cf[c2])); }
         var ck=ct.join(SEP);
         for(var L=1; L<rf.length; L++){ var pk=rt.slice(0,L).join(SEP);
           var o=pcell[pk]||(pcell[pk]={}); (o[ck]||(o[ck]=[])).push(row);
@@ -910,7 +967,7 @@
     if(rf.length===0){ pushNode("all","(all)","",P.filtered,true); }
     else {
       var groups={};
-      P.filtered.forEach(function(row){ var t=rf.map(function(f){ var v=row[fieldIndex[f]]; return (v===null||v===undefined)?"":String(v); });
+      P.filtered.forEach(function(row){ var t=rf.map(function(f){ return tokenValue(row, f); });
         for(var L=1; L<=rf.length; L++){ var key=t.slice(0,L).join(SEP); (groups[key]||(groups[key]=[])).push(row); } });
       Object.keys(groups).forEach(function(key){ var parts=key.split(SEP), depth=parts.length;
         pushNode(key, blankify(parts[depth-1]), depth>1? parts.slice(0,depth-1).join(SEP):"", groups[key], depth===rf.length); });
@@ -958,8 +1015,20 @@
   function renderFields(){
     var html="";
     headers.forEach(function(h){
-      html+='<div class="field-row" data-field="'+esc(h)+'"><span class="fname" title="'+esc(h)+'">'+esc(h)+'</span>'+
+      var isD=isDateField(distinct[h]||[]);
+      html+='<div class="field-row'+(isD?' has-hier':'')+'" data-field="'+esc(h)+'">'+
+        (isD?'<span class="dtoggle" title="Show date hierarchy (Year ▸ Quarter ▸ Month ▸ Day)">▸</span>':'')+
+        '<span class="fname" title="'+esc(h)+'">'+esc(h)+'</span>'+
         '<span class="adds"><button data-add="rows">R</button><button data-add="cols">C</button><button data-add="values">Σ</button><button data-add="filters">⏚</button></span></div>';
+      if(isD){
+        html+='<div class="date-parts" data-for="'+esc(h)+'" hidden>';
+        DATE_PARTS.forEach(function(part){
+          var tok=makeDateToken(h,part);
+          html+='<div class="field-row sub" data-field="'+esc(tok)+'"><span class="fname" title="'+esc(h)+' ('+part+')">'+part+'</span>'+
+            '<span class="adds"><button data-add="rows">R</button><button data-add="cols">C</button><button data-add="values">Σ</button></span></div>';
+        });
+        html+='</div>';
+      }
     });
     var sm=state.savedMeasures||[];
     if(sm.length){
@@ -980,9 +1049,9 @@
   }
   function filterLabel(field, exclArr){
     var fi=filterInfo(field, exclArr);
-    if(fi.one!==null) return esc(field)+': '+esc(dispLabel(fi.one));
-    if(fi.active) return esc(field)+' ('+(fi.inc<=0?'none':fi.inc+' selected')+')';
-    return esc(field);
+    if(fi.one!==null) return esc(fieldLabel(field))+': '+esc(dispLabel(fi.one));
+    if(fi.active) return esc(fieldLabel(field))+' ('+(fi.inc<=0?'none':fi.inc+' selected')+')';
+    return esc(fieldLabel(field));
   }
 
   function chipHtml(bucket, item){
@@ -995,14 +1064,14 @@
         return '<li class="chip calc" data-id="'+item.id+'"><span class="badge">fx</span><span class="cname" title="'+esc(measureLabel(item))+'">'+esc(measureLabel(item))+'</span>'+tools+'</li>';
       }
       var opts=AGGS.map(function(a){ return '<option'+(a===item.agg?' selected':'')+'>'+a+'</option>'; }).join("");
-      var nm=item.label?esc(item.label):esc(item.field);
+      var nm=item.label?esc(item.label):esc(fieldLabel(item.field));
       return '<li class="chip" data-id="'+item.id+'"><span class="cname" title="'+nm+'">'+nm+'</span><select data-act="agg">'+opts+'</select>'+tools+'</li>';
     }
     if(bucket==="filters"){
       var lbl=filterLabel(item, state.exclusions[item]);
       return '<li class="chip" data-field="'+esc(item)+'"><span class="cname" title="'+lbl+'">'+lbl+'</span><button class="fbtn" data-act="filter">filter</button><span class="x" data-act="remove">✕</span></li>';
     }
-    return '<li class="chip" data-field="'+esc(item)+'"><span class="cname" title="'+esc(item)+'">'+esc(item)+'</span><span class="x" data-act="remove">✕</span></li>';
+    return '<li class="chip" data-field="'+esc(item)+'"><span class="cname" title="'+esc(fieldLabel(item))+'">'+esc(fieldLabel(item))+'</span><span class="x" data-act="remove">✕</span></li>';
   }
 
   function renderBuckets(){
@@ -1017,6 +1086,7 @@
     renderBuckets(); rerender();
   }
   function defaultAgg(field){ // numeric-ish field -> Sum, else Count
+    if(parseFieldToken(field).part) return "Count Unique"; // date-part as a measure: distinct periods
     var idx=fieldIndex[field], n=0, tot=0;
     for(var i=0;i<rows.length && i<400;i++){ var v=rows[i][idx]; if(v===""||v===null||v===undefined) continue; tot++; if(isFinite(Number(v))) n++; }
     return (tot>0 && n/tot>0.6) ? "Sum" : "Count";
@@ -1024,6 +1094,8 @@
 
   // delegated events on buckets
   $(document).on("click", ".field-row button[data-add]", function(){ addField($(this).closest(".field-row").data("field"), $(this).data("add")); });
+  // expand/collapse a date field's Year▸Quarter▸Month▸Day hierarchy
+  $(document).on("click", "#fields .dtoggle", function(e){ e.stopPropagation(); var $dp=$(this).closest(".field-row").next(".date-parts"); var hidden=$dp.prop("hidden"); $dp.prop("hidden", !hidden); this.textContent = hidden ? "▾" : "▸"; });
   // saved-measure (library) actions
   function findSaved(id){ var sm=state.savedMeasures||[]; for(var i=0;i<sm.length;i++){ if(String(sm[i].id)===String(id)) return sm[i]; } return null; }
   function clearCalcCaches(){ (state.values||[]).forEach(function(m){ if(m.kind==="calc"||m.kind==="ref") delete m._fn; }); (state.savedMeasures||[]).forEach(function(sm){ delete sm._fn; }); } // saved-measure edits change what referencing measures resolve to
@@ -1056,7 +1128,7 @@
   $(document).on("click", "#b-values .ic[data-act=edit]", function(){
     var m=findMeasure($(this).closest(".chip").data("id")); if(!m) return;
     if(m.kind==="ref"||m.kind==="calc"){ openCalcDialog(m); }
-    else { var cur=m.label||(m.agg+" of "+m.field); var name=window.prompt("Measure name (blank = default):", cur); if(name===null) return; name=name.trim(); if(!name||name===(m.agg+" of "+m.field)) delete m.label; else m.label=name; renderBuckets(); rerender(); }
+    else { var def=m.agg+" of "+fieldLabel(m.field); var cur=m.label||def; var name=window.prompt("Measure name (blank = default):", cur); if(name===null) return; name=name.trim(); if(!name||name===def) delete m.label; else m.label=name; renderBuckets(); rerender(); }
   });
   $(document).on("click", "#b-values .ic[data-act=dup]", function(){
     var m=findMeasure($(this).closest(".chip").data("id")); if(!m) return;
@@ -1732,7 +1804,7 @@
 
   // pin dialog
   var $pin=$("#pin");
-  function defaultTileTitle(){ if(state.values.length){ return state.values.map(measureLabel).slice(0,2).join(", ")+(state.rows.length?(" by "+state.rows.join(", ")):""); } if(state.rows.length) return state.rows.join(", "); return "Tile"; }
+  function defaultTileTitle(){ if(state.values.length){ return state.values.map(measureLabel).slice(0,2).join(", ")+(state.rows.length?(" by "+state.rows.map(fieldLabel).join(", ")):""); } if(state.rows.length) return state.rows.map(fieldLabel).join(", "); return "Tile"; }
   function openPin(){
     var editing=!!editingTileId, et=editing?findTile(editingTileId):null;
     $id("pin-title").value = (editing && et) ? et.title : defaultTileTitle();
