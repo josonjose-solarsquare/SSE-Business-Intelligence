@@ -1845,6 +1845,59 @@
   // ---------------- load ----------------
   function applyStateToControls(){ $("#viewseg button").removeClass("on").filter('[data-view="'+state.view+'"]').addClass("on"); $("#charttype").val(state.chartType); $("#tg-totals").prop("checked", state.totals!==false); $("#tg-subtot").prop("checked", state.subtotals===true); $("#tg-collapsible").prop("checked", state.collapsible===true); var co=state.chartOpts||(state.chartOpts={legend:true,labels:false,combo:{}}); $("#opt-legend").prop("checked", co.legend!==false); $("#opt-labels").prop("checked", co.labels===true); $("#opt-labelseries").prop("checked", co.labelSeries===true); updateChartUI(); }
 
+  // ---- ingest: accept more JSON shapes than the native { headers, rows } ----
+  // Recognizes: (1) { headers:[...], rows:[[...]] } (native — passthrough, extra keys ignored),
+  // (2) an array of flat objects [{col:val,...}, ...] (headers = union of keys, first-seen order),
+  // (3) a nested object of objects bottoming out in "leaf records" of scalar fields, e.g.
+  //     { "June-26": { "NCR": { mkt_cac:1, sales_cac:2 }, ... }, ... } — each nesting level (the
+  //     object keys with no field name of their own, e.g. month/region) becomes a dimension column;
+  //     the leaf object's own keys become value columns. Depth is auto-detected per branch (so
+  //     ragged nesting is fine); the user is asked once to name the derived dimension columns.
+  function isPlainObj(v){ return v!==null && typeof v==="object" && !Array.isArray(v); }
+  function isLeafRecord(o){ for(var k in o){ if(o.hasOwnProperty(k) && isPlainObj(o[k])) return false; } return true; }
+  function cellVal(v){ return v===undefined ? "" : (isPlainObj(v)||Array.isArray(v) ? JSON.stringify(v) : v); }
+  function flattenRecordArray(arr){
+    if(!arr.length) throw new Error("Empty array — nothing to show.");
+    if(!arr.every(isPlainObj)) throw new Error("Array elements must be objects, e.g. [{...}, {...}].");
+    var headers=[], seen={};
+    arr.forEach(function(it){ for(var k in it){ if(it.hasOwnProperty(k) && !seen[k]){ seen[k]=1; headers.push(k); } } });
+    var rows=arr.map(function(it){ return headers.map(function(h){ return cellVal(it[h]); }); });
+    return { headers:headers, rows:rows };
+  }
+  function flattenNestedObject(obj){
+    var recs=[], leafOrder=[], leafSeen={};
+    (function walk(node, path){
+      if(isLeafRecord(node)){
+        var rec={}; for(var k in node){ if(node.hasOwnProperty(k)){ if(!leafSeen[k]){ leafSeen[k]=1; leafOrder.push(k); } rec[k]=node[k]; } }
+        recs.push({ path:path, rec:rec }); return;
+      }
+      for(var key in node){ if(node.hasOwnProperty(key)) walk(node[key], path.concat([key])); }
+    })(obj, []);
+    if(!recs.length) throw new Error("Couldn't find any data fields in this JSON to turn into rows.");
+    var maxDepth=0; recs.forEach(function(r){ if(r.path.length>maxDepth) maxDepth=r.path.length; });
+    var dimHeaders=[];
+    if(maxDepth>0){
+      var suggestion=[]; for(var i=0;i<maxDepth;i++) suggestion.push("Level "+(i+1));
+      var example=recs[0].path.join(" > ");
+      var typed=window.prompt("This data has "+maxDepth+" nested level(s) before the fields (e.g. "+example+"). Name the columns, comma-separated:", suggestion.join(", "));
+      var names = typed ? typed.split(",").map(function(s){ return s.trim(); }).filter(Boolean) : [];
+      for(var j=0;j<maxDepth;j++) dimHeaders.push(names[j] || suggestion[j]);
+    }
+    var headers=dimHeaders.concat(leafOrder);
+    var rows=recs.map(function(r){
+      var row=[]; for(var d=0; d<maxDepth; d++) row.push(r.path[d]!==undefined ? r.path[d] : "");
+      leafOrder.forEach(function(k){ row.push(cellVal(r.rec[k])); });
+      return row;
+    });
+    return { headers:headers, rows:rows };
+  }
+  function reshapeToTable(d){
+    if(d && Array.isArray(d.headers) && Array.isArray(d.rows)) return { headers:d.headers, rows:d.rows };
+    if(Array.isArray(d)) return flattenRecordArray(d);
+    if(isPlainObj(d)) return flattenNestedObject(d);
+    throw new Error("Unrecognized JSON shape — expected { headers, rows }, an array of objects, or a nested object of records.");
+  }
+
   function load(){
     var url=$id("endpoint").value.trim();
     if(!url){ setStatus("Enter the /exec endpoint URL first.", true); return; }
@@ -1858,8 +1911,8 @@
       .then(function(d){
         tParse=Date.now()-t0-tNet;
         if(d&&d.error) throw new Error("Endpoint returned: "+d.error);
-        if(!d||!Array.isArray(d.headers)||!Array.isArray(d.rows)) throw new Error("Unexpected response shape (expected { headers, rows }).");
-        headers=d.headers; rows=d.rows; fieldIndex={}; headers.forEach(function(h,i){ fieldIndex[h]=i; });
+        var tbl=reshapeToTable(d);
+        headers=tbl.headers; rows=tbl.rows; fieldIndex={}; headers.forEach(function(h,i){ fieldIndex[h]=i; });
         // distinct values per field
         var sets=headers.map(function(){return new Set();});
         for(var i=0;i<rows.length;i++){ for(var c=0;c<headers.length;c++){ var v=rows[i][c]; sets[c].add(v===null||v===undefined?"":String(v)); } }
