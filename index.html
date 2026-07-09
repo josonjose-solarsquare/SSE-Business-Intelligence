@@ -473,7 +473,11 @@
   var PLOT_BASE = { colorway:PALETTE, font:PLOT_FONT, paper_bgcolor:"rgba(0,0,0,0)", plot_bgcolor:"rgba(0,0,0,0)", hoverlabel:HOVERLABEL };
 
   // ---------------- data + state ----------------
-  var headers = [], rows = [], fieldIndex = {}, distinct = {};
+  // `headers`/`fieldIndex`/`distinct` are keyed by the DISPLAYED field name (raw, or renamed via
+  // state.fieldAliases). `rawFieldName[displayedName]` maps back to the source column name, so a
+  // field can be renamed again later and so state.fieldAliases (keyed by raw name) stays correct
+  // even after the endpoint is re-fetched.
+  var headers = [], rows = [], fieldIndex = {}, distinct = {}, rawFieldName = {};
   var uid = 1, smuid = 1;
   var state = {
     rows: [], cols: [], filters: [],
@@ -1040,7 +1044,7 @@
       html+='<div class="field-row'+(isD?' has-hier':'')+'" data-field="'+esc(h)+'">'+
         (isD?'<span class="dtoggle" title="Show date hierarchy (Year ▸ Quarter ▸ Month ▸ Day)">▸</span>':'')+
         '<span class="fname" title="'+esc(h)+'">'+esc(h)+'</span>'+
-        '<span class="adds"><button data-add="rows">R</button><button data-add="cols">C</button><button data-add="values">Σ</button><button data-add="filters">⏚</button></span></div>';
+        '<span class="adds"><button data-add="rows">R</button><button data-add="cols">C</button><button data-add="values">Σ</button><button data-add="filters">⏚</button><button data-rename title="Rename field (applies everywhere)">✎</button></span></div>';
       if(isD){
         html+='<div class="date-parts" data-for="'+esc(h)+'" hidden>';
         DATE_PARTS.forEach(function(part){
@@ -1115,6 +1119,7 @@
 
   // delegated events on buckets
   $(document).on("click", ".field-row button[data-add]", function(){ addField($(this).closest(".field-row").data("field"), $(this).data("add")); });
+  $(document).on("click", "#fields > .field-row button[data-rename]", function(e){ e.stopPropagation(); renameField($(this).closest(".field-row").data("field")); });
   // expand/collapse a date field's Year▸Quarter▸Month▸Day hierarchy
   $(document).on("click", "#fields .dtoggle", function(e){ e.stopPropagation(); var $dp=$(this).closest(".field-row").next(".date-parts"); var hidden=$dp.prop("hidden"); $dp.prop("hidden", !hidden); this.textContent = hidden ? "▾" : "▸"; });
   // saved-measure (library) actions
@@ -1127,6 +1132,57 @@
     function fixArr(arr){ (arr||[]).forEach(function(m){ if(m && typeof m.expr==="string" && m.expr.indexOf(find)>=0){ m.expr=m.expr.split(find).join(repl); delete m._fn; } }); }
     fixArr(state.savedMeasures); fixArr(state.values);
     ((state.dash&&state.dash.tabs)||[]).forEach(function(tab){ (tab.tiles||[]).forEach(function(t){ if(t.cfg) fixArr(t.cfg.values); }); });
+  }
+  // Renaming a raw field rewrites every place its name is stored as a string: Rows/Cols/Filters
+  // lists, base-measure .field (including date-part tokens like "OrderDate⟨▸⟩Month", whose base
+  // gets swapped), exclusion keys, and calc-expression [Field] tokens — across the builder AND
+  // every dashboard tile's own cfg (tiles snapshot their own rows/cols/values). Without this, a
+  // rename would only affect newly-added chips; everything already placed would keep referencing
+  // the old name and silently stop resolving on the next render/refresh.
+  function renameFieldToken(tok, oldName, newName){
+    if(tok===oldName) return newName;
+    var p=parseFieldToken(tok);
+    if(p.part && p.base===oldName) return makeDateToken(newName, p.part);
+    return tok;
+  }
+  function renameFieldRefs(oldName, newName){
+    if(!oldName || oldName===newName) return;
+    function fixList(arr){ if(!arr) return; for(var i=0;i<arr.length;i++){ arr[i]=renameFieldToken(arr[i], oldName, newName); } }
+    function fixCfg(cfg){
+      if(!cfg) return;
+      fixList(cfg.rows); fixList(cfg.cols); fixList(cfg.filters);
+      (cfg.values||[]).forEach(function(m){ if(m.kind==="base") m.field=renameFieldToken(m.field, oldName, newName); });
+      if(cfg.exclusions && cfg.exclusions.hasOwnProperty(oldName)){ cfg.exclusions[newName]=cfg.exclusions[oldName]; delete cfg.exclusions[oldName]; }
+    }
+    fixCfg(state);
+    var find="["+oldName+"]", repl="["+newName+"]";
+    function fixExprArr(arr){ (arr||[]).forEach(function(m){ if(m && typeof m.expr==="string" && m.expr.indexOf(find)>=0){ m.expr=m.expr.split(find).join(repl); delete m._fn; } }); }
+    fixExprArr(state.savedMeasures); fixExprArr(state.values);
+    ((state.dash&&state.dash.tabs)||[]).forEach(function(tab){
+      (tab.tiles||[]).forEach(function(t){
+        if(t.cfg){ fixCfg(t.cfg); fixExprArr(t.cfg.values); }
+        if(t.kind==="slicer" && t.field===oldName) t.field=newName;
+      });
+      if(tab.global && tab.global.hasOwnProperty(oldName)){ tab.global[newName]=tab.global[oldName]; delete tab.global[oldName]; }
+    });
+  }
+  function renameField(rawOrDisplayedName){
+    var oldDisplay = rawOrDisplayedName;
+    var raw = rawFieldName[oldDisplay] || oldDisplay;
+    var newName = window.prompt("Rename field (applies to all rows/columns/values/filters that use it, everywhere):", oldDisplay);
+    if(newName===null) return;
+    newName = newName.trim();
+    if(!newName || newName===oldDisplay) return;
+    var clash = headers.indexOf(newName)>=0 && newName!==oldDisplay;
+    if(!clash) clash = (state.savedMeasures||[]).some(function(sm){ return sm.label===newName; });
+    if(clash){ window.alert('"'+newName+'" is already used by another field or measure — choose a different name.'); return; }
+    if(!state.fieldAliases) state.fieldAliases={};
+    if(newName===raw) delete state.fieldAliases[raw]; else state.fieldAliases[raw]=newName;
+    renameFieldRefs(oldDisplay, newName);
+    var idx=headers.indexOf(oldDisplay);
+    if(idx>=0){ headers[idx]=newName; fieldIndex[newName]=idx; delete fieldIndex[oldDisplay]; distinct[newName]=distinct[oldDisplay]; delete distinct[oldDisplay]; rawFieldName[newName]=raw; delete rawFieldName[oldDisplay]; }
+    clearCalcCaches();
+    saveState(); renderFields(); renderBuckets(); rerender();
   }
   $(document).on("click", ".field-row.measure button[data-smadd]", function(){ var m=findSaved($(this).closest(".field-row").data("sm-id")); if(!m) return; state.values.push({ id:"m"+(uid++), kind:"ref", smId:m.id }); renderBuckets(); rerender(); });
   $(document).on("click", ".field-row.measure button[data-smedit]", function(){ var m=findSaved($(this).closest(".field-row").data("sm-id")); if(m) openSavedMeasureDialog(m); });
@@ -1197,7 +1253,7 @@
     if(iso) return Date.UTC(+iso[1],+iso[2]-1,+iso[3],+(iso[4]||0),+(iso[5]||0),+(iso[6]||0));
     var dmy=/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})(?:[ T](\d{1,2}):(\d{2}))?/.exec(v); // day-month-year
     if(dmy) return Date.UTC(+dmy[3],+dmy[2]-1,+dmy[1],+(dmy[4]||0),+(dmy[5]||0));
-    var mon=/^([A-Za-z]{3})[A-Za-z]*[-\s](\d{2}|\d{4})$/.exec(v); // month-year, e.g. "Jun-26", "June 2026"
+    var mon=/^([A-Za-z]{3})[A-Za-z]*\s*-?\s*(\d{2}|\d{4})$/.exec(v); // month-year; separator may be "-", " ", " - ", etc. (source data is inconsistent: "Jun-26" and "July -25" both occur)
     if(mon){ var mi=MON_IDX[mon[1].toLowerCase()]; if(mi!==undefined){ var yr=mon[2].length===2?(2000+ +mon[2]):+mon[2]; return Date.UTC(yr,mi,1); } }
     return null;
   }
@@ -1948,7 +2004,12 @@
         tParse=Date.now()-t0-tNet;
         if(d&&d.error) throw new Error("Endpoint returned: "+d.error);
         var tbl=reshapeToTable(d, url);
-        headers=tbl.headers; rows=tbl.rows; fieldIndex={}; headers.forEach(function(h,i){ fieldIndex[h]=i; });
+        // apply user field renames (state.fieldAliases, keyed by raw source name) to the freshly-fetched headers,
+        // so a rename survives a Refresh data / new session instead of only affecting the current in-memory state
+        var aliases=state.fieldAliases||{};
+        rows=tbl.rows; rawFieldName={};
+        headers=tbl.headers.map(function(raw){ var disp=aliases[raw]||raw; rawFieldName[disp]=raw; return disp; });
+        fieldIndex={}; headers.forEach(function(h,i){ fieldIndex[h]=i; });
         // distinct values per field
         var sets=headers.map(function(){return new Set();});
         for(var i=0;i<rows.length;i++){ for(var c=0;c<headers.length;c++){ var v=rows[i][c]; sets[c].add(v===null||v===undefined?"":String(v)); } }
@@ -2007,7 +2068,7 @@
     (((state.dash||{}).tabs)||[]).forEach(function(tb){ var tn=parseInt(String(tb.id).replace(/\D/g,''),10); if(tn>=tabuid) tabuid=tn+1; (tb.tiles||[]).forEach(function(t){ var n=parseInt(String(t.id).replace(/\D/g,''),10); if(n>=tuid) tuid=n+1; }); });
   }
   var DEFAULT_DASHNAME = "Nagpur MS Allocation";
-  function freshState(){ return { rows:[],cols:[],filters:[],values:[],savedMeasures:[],exclusions:{},view:"table",chartType:"bar",sort:{key:"__row__",dir:1},totals:true,subtotals:false,collapsible:false,collapsed:{},chartOpts:{legend:true,labels:false,labelSeries:false,combo:{},kpiColor:"#003049"},mode:"builder",dash:freshDash(),dashName:DEFAULT_DASHNAME }; }
+  function freshState(){ return { rows:[],cols:[],filters:[],values:[],savedMeasures:[],exclusions:{},view:"table",chartType:"bar",sort:{key:"__row__",dir:1},totals:true,subtotals:false,collapsible:false,collapsed:{},chartOpts:{legend:true,labels:false,labelSeries:false,combo:{},kpiColor:"#003049"},mode:"builder",dash:freshDash(),dashName:DEFAULT_DASHNAME,fieldAliases:{} }; }
   function syncDashName(){ $id("dashname").textContent = state.dashName || DEFAULT_DASHNAME; }
 
   var $exp=$("#expdlg");
@@ -2035,6 +2096,7 @@
     if(!state.collapsed) state.collapsed={};
     if(!state.dash || !state.dash.tabs) state.dash=freshDash();
     if(!state.dashName) state.dashName=DEFAULT_DASHNAME;
+    if(!state.fieldAliases) state.fieldAliases={};
     reinitCounters();
     if(payload.endpoint){ $id("endpoint").value=payload.endpoint; saveEndpoint(); }
     if(gridApi){ try{ gridApi.removeAll(); }catch(e){} }
@@ -2111,6 +2173,7 @@
   if(state.dash.tiles && !state.dash.tabs){ state.dash={ tabs:[{ id:"tab1", name:"Tab 1", tiles:state.dash.tiles||[], global:state.dash.global||{} }], activeTabId:"tab1", cols:state.dash.cols||10, cellH:state.dash.cellH||44 }; }
   if(!state.dash.tabs || !state.dash.tabs.length){ state.dash.tabs=[{id:"tab1",name:"Tab 1",tiles:[],global:{}}]; state.dash.activeTabId="tab1"; }
   if(!state.dashName) state.dashName=DEFAULT_DASHNAME;
+  if(!state.fieldAliases) state.fieldAliases={};
   reinitCounters();
   loadEndpoint(); syncDashName();
   load();
