@@ -143,6 +143,8 @@
   #calc .body2 { padding:12px; }
   #calc label.lbl { display:block; font-size:13px; color:var(--muted); margin:0 0 3px; }
   #calc input, #calc textarea { width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:6px; font-size:14px; }
+  #expdlg label.lbl { display:block; font-size:13px; color:var(--muted); margin:0 0 3px; }
+  #expdlg input { width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:6px; font-size:14px; box-sizing:border-box; }
   #calc textarea { font-family:ui-monospace,Menlo,monospace; min-height:60px; resize:vertical; }
   #calc .hint { font-size:13px; color:var(--muted); margin-top:6px; }
   #calc .hint code, .save-toggle code { background:var(--surface); border:1px solid var(--border); border-radius:4px; padding:0 4px; font-size:12px; }
@@ -233,7 +235,7 @@
       <div class="brandmark">SSE</div>
       <div>
         <h1>SSE Business Intelligence</h1>
-        <div class="sub">Nagpur MS Allocation</div>
+        <div class="sub" id="dashname">Nagpur MS Allocation</div>
       </div>
     </div>
     <div class="modeseg" id="modeseg">
@@ -412,6 +414,19 @@
   <div class="foot"><button id="imp-cancel">Close</button></div>
 </div>
 
+<!-- export dialog -->
+<div id="expdlg" class="pop" style="width:400px;">
+  <div class="h" style="padding:10px 12px;border-bottom:1px solid var(--border);font-weight:600;">Export workspace</div>
+  <div class="body2" style="padding:12px;">
+    <label class="lbl">Dashboard name <span style="font-weight:400;">(shown under the header)</span></label>
+    <input id="exp-dashname" type="text" placeholder="e.g. Sales &amp; Marketing CAC Dashboard" />
+    <label class="lbl" style="margin-top:10px;">File name</label>
+    <input id="exp-filename" type="text" placeholder="e.g. sse-bi-2026-07-09" />
+    <div style="font-size:12px;color:var(--muted);margin-top:8px;">Downloads a .json — commit it to the site folder to share.</div>
+  </div>
+  <div class="foot"><button id="exp-cancel">Cancel</button><button id="exp-ok" class="primary">⬇ Download</button></div>
+</div>
+
 <!-- filter popup -->
 <div id="flt" class="pop">
   <div class="h">
@@ -479,6 +494,12 @@
 
   function saveState(){ try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch(e){} }
   function loadState(){ try { var s=JSON.parse(localStorage.getItem(LS_KEY)); if(s){ state=$.extend(state,s); var m=0; (state.values||[]).forEach(function(v){var n=parseInt(String(v.id).replace(/\D/g,''),10); if(n>m)m=n;}); uid=m+1; } } catch(e){} }
+
+  // remembers the most recently used data endpoint per-browser, so it survives a page reload
+  // without needing Export/Import (the endpoint itself is NOT part of `state` — see exportWorkspace).
+  var LS_ENDPOINT_KEY = "sheetsPivot.endpoint.v1";
+  function saveEndpoint(){ try{ localStorage.setItem(LS_ENDPOINT_KEY, $id("endpoint").value.trim()); }catch(e){} }
+  function loadEndpoint(){ try{ var v=localStorage.getItem(LS_ENDPOINT_KEY); if(v) $id("endpoint").value=v; }catch(e){} }
 
   // ---------------- aggregation ----------------
   function numList(grp, idx){ var out=[]; for(var i=0;i<grp.length;i++){ var n=Number(grp[i][idx]); if(grp[i][idx]!=="" && grp[i][idx]!==null && isFinite(n)) out.push(n); } return out; }
@@ -1901,6 +1922,7 @@
   function load(){
     var url=$id("endpoint").value.trim();
     if(!url){ setStatus("Enter the /exec endpoint URL first.", true); return; }
+    saveEndpoint();
     $id("refresh").disabled=true;
     setStatus("<span class='spinner'></span>Fetching… (≈20k rows, a few seconds)");
     var t0=Date.now(), tNet=0, tParse=0;
@@ -1970,16 +1992,26 @@
     (state.savedMeasures||[]).forEach(function(m){ var n=parseInt(String(m.id).replace(/\D/g,''),10); if(n>=smuid) smuid=n+1; });
     (((state.dash||{}).tabs)||[]).forEach(function(tb){ var tn=parseInt(String(tb.id).replace(/\D/g,''),10); if(tn>=tabuid) tabuid=tn+1; (tb.tiles||[]).forEach(function(t){ var n=parseInt(String(t.id).replace(/\D/g,''),10); if(n>=tuid) tuid=n+1; }); });
   }
-  function freshState(){ return { rows:[],cols:[],filters:[],values:[],savedMeasures:[],exclusions:{},view:"table",chartType:"bar",sort:{key:"__row__",dir:1},totals:true,subtotals:false,collapsible:false,collapsed:{},chartOpts:{legend:true,labels:false,labelSeries:false,combo:{},kpiColor:"#003049"},mode:"builder",dash:freshDash() }; }
+  var DEFAULT_DASHNAME = "Nagpur MS Allocation";
+  function freshState(){ return { rows:[],cols:[],filters:[],values:[],savedMeasures:[],exclusions:{},view:"table",chartType:"bar",sort:{key:"__row__",dir:1},totals:true,subtotals:false,collapsible:false,collapsed:{},chartOpts:{legend:true,labels:false,labelSeries:false,combo:{},kpiColor:"#003049"},mode:"builder",dash:freshDash(),dashName:DEFAULT_DASHNAME }; }
+  function syncDashName(){ $id("dashname").textContent = state.dashName || DEFAULT_DASHNAME; }
 
+  var $exp=$("#expdlg");
+  function openExportDialog(){
+    $id("exp-dashname").value = state.dashName || DEFAULT_DASHNAME;
+    $id("exp-filename").value = "sse-bi-"+new Date().toISOString().slice(0,10);
+    $exp.css({display:"block", top:"90px", left:Math.max(8,(window.innerWidth-400)/2)+"px"});
+    $id("exp-dashname").focus();
+  }
   function exportWorkspace(){
+    var dashName=$id("exp-dashname").value.trim() || DEFAULT_DASHNAME;
     var def="sse-bi-"+new Date().toISOString().slice(0,10);
-    var name=window.prompt("Name this export (downloads a .json — commit it to the site folder to share):", def);
-    if(name===null) return;
-    name=(name.trim()||def).replace(/\.json$/i,"").replace(/[^\w.\-]+/g,"_");
+    var name=($id("exp-filename").value.trim() || def).replace(/\.json$/i,"").replace(/[^\w.\-]+/g,"_");
+    state.dashName=dashName; syncDashName(); saveState();
     var payload={ app:"sse-bi", version:1, exportedAt:new Date().toISOString(), endpoint:$id("endpoint").value.trim(), state:state };
     var blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"}), url=URL.createObjectURL(blob);
     var a=document.createElement("a"); a.href=url; a.download=name+".json"; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    $exp.hide();
   }
   function applyWorkspace(payload){
     if(!payload || typeof payload!=="object" || !payload.state) throw new Error("Not a valid SSE-BI workspace file.");
@@ -1988,11 +2020,12 @@
     if(!state.savedMeasures) state.savedMeasures=[];
     if(!state.collapsed) state.collapsed={};
     if(!state.dash || !state.dash.tabs) state.dash=freshDash();
+    if(!state.dashName) state.dashName=DEFAULT_DASHNAME;
     reinitCounters();
-    if(payload.endpoint) $id("endpoint").value=payload.endpoint;
+    if(payload.endpoint){ $id("endpoint").value=payload.endpoint; saveEndpoint(); }
     if(gridApi){ try{ gridApi.removeAll(); }catch(e){} }
     setEditingTile(null); hist.undo=[]; hist.redo=[]; hist.last=null;
-    saveState(); renderBuckets(); applyStateToControls(); rerender(); setMode(state.mode||"builder");
+    saveState(); syncDashName(); renderBuckets(); applyStateToControls(); rerender(); setMode(state.mode||"builder");
     setStatus("Workspace imported. Press <b>Refresh data</b> to pull live numbers.", false);
   }
   function clearEverything(){
@@ -2001,9 +2034,11 @@
     if(gridApi){ try{ gridApi.removeAll(); }catch(e){} }
     state=freshState(); reinitCounters(); setEditingTile(null);
     hist.undo=[]; hist.redo=[]; hist.last=null;
-    saveState(); renderBuckets(); applyStateToControls(); rerender(); setMode("builder");
+    saveState(); syncDashName(); renderBuckets(); applyStateToControls(); rerender(); setMode("builder");
   }
-  $id("exportbtn").addEventListener("click", exportWorkspace);
+  $id("exportbtn").addEventListener("click", openExportDialog);
+  $id("exp-cancel").addEventListener("click", function(){ $exp.hide(); });
+  $id("exp-ok").addEventListener("click", exportWorkspace);
   $id("clearall").addEventListener("click", clearEverything);
 
   // ---- import dialog (auto-lists JSON in the site's GitHub folder + file fallback) ----
@@ -2021,8 +2056,18 @@
     listEl.textContent="Loading…";
     fetch(api).then(function(r){ if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); }).then(function(items){
       var jsons=(items||[]).filter(function(it){ return it.type==="file" && /\.json$/i.test(it.name); });
-      if(!jsons.length){ listEl.innerHTML='<div style="color:var(--muted)">No .json workspaces in this folder yet.</div>'; return; }
-      listEl.innerHTML=jsons.map(function(it){ return '<div class="imp-item" data-url="'+esc(it.download_url)+'" title="'+esc(it.name)+'">📄 '+esc(it.name)+'</div>'; }).join("");
+      if(!jsons.length){ listEl.innerHTML='<div style="color:var(--muted)">No .json workspaces in this folder yet.</div>'; return null; }
+      // peek each file's content for its dashboard name (folder listing only gives filenames)
+      return Promise.all(jsons.map(function(it){
+        return fetch(it.download_url).then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; })
+          .then(function(p){ return { it:it, dashName: (p && p.state && p.state.dashName) ? p.state.dashName : null }; });
+      })).then(function(entries){
+        listEl.innerHTML=entries.map(function(e){
+          var full = e.dashName ? (e.dashName+" — "+e.it.name) : e.it.name;
+          var label = e.dashName ? ("<b>"+esc(e.dashName)+"</b> — "+esc(e.it.name)) : esc(e.it.name);
+          return '<div class="imp-item" data-url="'+esc(e.it.download_url)+'" title="'+esc(full)+'">📄 '+label+'</div>';
+        }).join("");
+      });
     }).catch(function(){ listEl.innerHTML='<div style="color:var(--muted)">Couldn’t list this folder (not GitHub, private, or API rate-limited). Use the file picker below.</div>'; });
   }
   function openImport(){ $id("imp-err").textContent=""; $id("imp-file").value=""; $imp.css({display:"block", top:"90px", left:Math.max(8,(window.innerWidth-400)/2)+"px"}); loadGithubList(); }
@@ -2051,7 +2096,9 @@
   // migrate old single-board dashboards (tiles/global at top level) into one tab
   if(state.dash.tiles && !state.dash.tabs){ state.dash={ tabs:[{ id:"tab1", name:"Tab 1", tiles:state.dash.tiles||[], global:state.dash.global||{} }], activeTabId:"tab1", cols:state.dash.cols||10, cellH:state.dash.cellH||44 }; }
   if(!state.dash.tabs || !state.dash.tabs.length){ state.dash.tabs=[{id:"tab1",name:"Tab 1",tiles:[],global:{}}]; state.dash.activeTabId="tab1"; }
+  if(!state.dashName) state.dashName=DEFAULT_DASHNAME;
   reinitCounters();
+  loadEndpoint(); syncDashName();
   load();
 })();
 </script>

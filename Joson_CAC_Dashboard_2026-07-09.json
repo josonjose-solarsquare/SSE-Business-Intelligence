@@ -1,0 +1,118 @@
+{
+  "app": "sse-bi",
+  "version": 1,
+  "exportedAt": "2026-07-09T07:30:44.960Z",
+  "endpoint": "https://script.google.com/macros/s/AKfycbxNP2rifuwgxVXxoGKim3ecUHXNJ3IfcDjXkJ9has-xq-AZCJUxtYtLIM0EJ5_1HJiV/exec",
+  "state": {
+    "dashName": "Sales & Marketing CAC Dashboard",
+    "rows": [
+      "Month"
+    ],
+    "cols": [],
+    "filters": [
+      "Month",
+      "Region"
+    ],
+    "values": [
+      {
+        "id": "m2",
+        "kind": "base",
+        "field": "hoto_Digital",
+        "agg": "Sum"
+      },
+      {
+        "id": "m3",
+        "kind": "base",
+        "field": "hoto_Referral",
+        "agg": "Sum"
+      },
+      {
+        "id": "m4",
+        "kind": "base",
+        "field": "hoto_SolarPro",
+        "agg": "Sum"
+      },
+      {
+        "id": "m5",
+        "kind": "base",
+        "field": "hoto_BTL Activity",
+        "agg": "Sum"
+      }
+    ],
+    "savedMeasures": [],
+    "exclusions": {
+      "Month": [
+        "July -25",
+        "Jun-26",
+        "June -25",
+        "May -25"
+      ],
+      "Region": [
+        "Agra",
+        "Ahmedabad",
+        "Amravati",
+        "Aurangabad",
+        "Bangalore",
+        "Bareilly",
+        "Bhopal",
+        "Chennai",
+        "Coimbatore",
+        "Delhi",
+        "Faridabad",
+        "Ghaziabad",
+        "Gurgaon",
+        "Gwalior",
+        "Hyderabad",
+        "INDIA - Existing",
+        "INDIA - Expansion",
+        "Indore",
+        "Jabalpur",
+        "Jaipur",
+        "Jalgaon",
+        "Kanpur",
+        "Kolhapur",
+        "Lucknow",
+        "Meerut",
+        "Nashik",
+        "NCR",
+        "Noida",
+        "Pune",
+        "Solapur",
+        "Surat",
+        "Varanasi",
+        "Vijayawada"
+      ]
+    },
+    "view": "chart",
+    "chartType": "line",
+    "sort": {
+      "key": "__row__",
+      "dir": 1
+    },
+    "totals": true,
+    "subtotals": false,
+    "collapsible": false,
+    "collapsed": {},
+    "chartOpts": {
+      "legend": true,
+      "labels": false,
+      "labelSeries": false,
+      "combo": {},
+      "kpiColor": "#003049"
+    },
+    "mode": "builder",
+    "dash": {
+      "tabs": [
+        {
+          "id": "tab1",
+          "name": "Tab 1",
+          "tiles": [],
+          "global": {}
+        }
+      ],
+      "activeTabId": "tab1",
+      "cols": 10,
+      "cellH": 44
+    }
+  }
+}
