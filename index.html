@@ -1189,6 +1189,7 @@
   // ---------------- filter popup ----------------
   var $flt=$("#flt"), fstate=null, fltTarget=null;
   var MONTHS=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  var MON_IDX={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
   function pad2(n){ return (n<10?"0":"")+n; }
   function parseDateVal(v){
     if(v===""||v===null||v===undefined) return null;
@@ -1196,6 +1197,8 @@
     if(iso) return Date.UTC(+iso[1],+iso[2]-1,+iso[3],+(iso[4]||0),+(iso[5]||0),+(iso[6]||0));
     var dmy=/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})(?:[ T](\d{1,2}):(\d{2}))?/.exec(v); // day-month-year
     if(dmy) return Date.UTC(+dmy[3],+dmy[2]-1,+dmy[1],+(dmy[4]||0),+(dmy[5]||0));
+    var mon=/^([A-Za-z]{3})[A-Za-z]*[-\s](\d{2}|\d{4})$/.exec(v); // month-year, e.g. "Jun-26", "June 2026"
+    if(mon){ var mi=MON_IDX[mon[1].toLowerCase()]; if(mi!==undefined){ var yr=mon[2].length===2?(2000+ +mon[2]):+mon[2]; return Date.UTC(yr,mi,1); } }
     return null;
   }
   function isDateField(vals){ var n=0,ok=0; for(var i=0;i<vals.length && i<300;i++){ var v=vals[i]; if(v==="") continue; n++; if(parseDateVal(v)!==null) ok++; } return n>0 && ok/n>0.7; }
@@ -1885,7 +1888,12 @@
     var rows=arr.map(function(it){ return headers.map(function(h){ return cellVal(it[h]); }); });
     return { headers:headers, rows:rows };
   }
-  function flattenNestedObject(obj){
+  // Remembers the dimension column names typed for a nested-object endpoint, keyed by endpoint URL,
+  // so the reshape prompt only needs answering once per source (not on every Refresh data).
+  var LS_RESHAPE_KEY = "sheetsPivot.reshapeNames.v1";
+  function loadReshapeNames(url){ try{ var m=JSON.parse(localStorage.getItem(LS_RESHAPE_KEY))||{}; return m[url]||null; }catch(e){ return null; } }
+  function saveReshapeNames(url, names){ try{ var m=JSON.parse(localStorage.getItem(LS_RESHAPE_KEY))||{}; m[url]=names; localStorage.setItem(LS_RESHAPE_KEY, JSON.stringify(m)); }catch(e){} }
+  function flattenNestedObject(obj, url){
     var recs=[], leafOrder=[], leafSeen={};
     (function walk(node, path){
       if(isLeafRecord(node)){
@@ -1898,11 +1906,17 @@
     var maxDepth=0; recs.forEach(function(r){ if(r.path.length>maxDepth) maxDepth=r.path.length; });
     var dimHeaders=[];
     if(maxDepth>0){
-      var suggestion=[]; for(var i=0;i<maxDepth;i++) suggestion.push("Level "+(i+1));
-      var example=recs[0].path.join(" > ");
-      var typed=window.prompt("This data has "+maxDepth+" nested level(s) before the fields (e.g. "+example+"). Name the columns, comma-separated:", suggestion.join(", "));
-      var names = typed ? typed.split(",").map(function(s){ return s.trim(); }).filter(Boolean) : [];
-      for(var j=0;j<maxDepth;j++) dimHeaders.push(names[j] || suggestion[j]);
+      var cached = url ? loadReshapeNames(url) : null;
+      if(cached && cached.length===maxDepth){
+        dimHeaders = cached.slice();
+      } else {
+        var suggestion=[]; for(var i=0;i<maxDepth;i++) suggestion.push("Level "+(i+1));
+        var example=recs[0].path.join(" > ");
+        var typed=window.prompt("This data has "+maxDepth+" nested level(s) before the fields (e.g. "+example+"). Name the columns, comma-separated:", suggestion.join(", "));
+        var names = typed ? typed.split(",").map(function(s){ return s.trim(); }).filter(Boolean) : [];
+        for(var j=0;j<maxDepth;j++) dimHeaders.push(names[j] || suggestion[j]);
+        if(url) saveReshapeNames(url, dimHeaders);
+      }
     }
     var headers=dimHeaders.concat(leafOrder);
     var rows=recs.map(function(r){
@@ -1912,10 +1926,10 @@
     });
     return { headers:headers, rows:rows };
   }
-  function reshapeToTable(d){
+  function reshapeToTable(d, url){
     if(d && Array.isArray(d.headers) && Array.isArray(d.rows)) return { headers:d.headers, rows:d.rows };
     if(Array.isArray(d)) return flattenRecordArray(d);
-    if(isPlainObj(d)) return flattenNestedObject(d);
+    if(isPlainObj(d)) return flattenNestedObject(d, url);
     throw new Error("Unrecognized JSON shape — expected { headers, rows }, an array of objects, or a nested object of records.");
   }
 
@@ -1933,7 +1947,7 @@
       .then(function(d){
         tParse=Date.now()-t0-tNet;
         if(d&&d.error) throw new Error("Endpoint returned: "+d.error);
-        var tbl=reshapeToTable(d);
+        var tbl=reshapeToTable(d, url);
         headers=tbl.headers; rows=tbl.rows; fieldIndex={}; headers.forEach(function(h,i){ fieldIndex[h]=i; });
         // distinct values per field
         var sets=headers.map(function(){return new Set();});
