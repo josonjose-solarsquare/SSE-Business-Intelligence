@@ -479,6 +479,8 @@
   // even after the endpoint is re-fetched.
   var headers = [], rows = [], fieldIndex = {}, distinct = {}, rawFieldName = {};
   var uid = 1, smuid = 1;
+  function defaultChartOpts(){ return { legend:true, labels:false, labelSeries:false, combo:{}, kpiColor:"#003049" }; }
+  function freshDash(){ return { tabs: [{ id:"tab1", name:"Tab 1", tiles:[], global:{} }], activeTabId:"tab1", cols: 10, cellH: 44 }; }
   var state = {
     rows: [], cols: [], filters: [],
     values: [],          // {id, kind:'base', field, agg} | {id, kind:'calc', label, expr}
@@ -486,18 +488,19 @@
     exclusions: {},      // field -> [excluded string values]
     view: "table", chartType: "bar",
     sort: { key:"__row__", dir:1 }, totals: true, subtotals: false, collapsible: false, collapsed: {},
-    chartOpts: { legend:true, labels:false, labelSeries:false, combo:{}, kpiColor:"#003049" },
+    chartOpts: defaultChartOpts(),
     mode: "builder",
-    dash: { tabs: [{ id:"tab1", name:"Tab 1", tiles:[], global:{} }], activeTabId:"tab1", cols: 10, cellH: 44 }
+    dash: freshDash()
   };
-  function freshDash(){ return { tabs: [{ id:"tab1", name:"Tab 1", tiles:[], global:{} }], activeTabId:"tab1", cols: 10, cellH: 44 }; }
 
   function $id(x){ return document.getElementById(x); }
   function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
   function setStatus(html,isErr){ var s=$id("status"); s.className=isErr?"error":""; s.innerHTML=html; }
+  // open a .pop dialog horizontally centered for its width
+  function showPop($el, width, top){ $el.css({display:"block", top:(top||90)+"px", left:Math.max(8,(window.innerWidth-width)/2)+"px"}); }
 
   function saveState(){ try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch(e){} }
-  function loadState(){ try { var s=JSON.parse(localStorage.getItem(LS_KEY)); if(s){ state=$.extend(state,s); var m=0; (state.values||[]).forEach(function(v){var n=parseInt(String(v.id).replace(/\D/g,''),10); if(n>m)m=n;}); uid=m+1; } } catch(e){} }
+  function loadState(){ try { var s=JSON.parse(localStorage.getItem(LS_KEY)); if(s) state=$.extend(state,s); } catch(e){} } // callers run normalizeState() after, which re-derives the id counters
 
   // remembers the most recently used data endpoint per-browser, so it survives a page reload
   // without needing Export/Import (the endpoint itself is NOT part of `state` — see exportWorkspace).
@@ -506,25 +509,34 @@
   function loadEndpoint(){ try{ var v=localStorage.getItem(LS_ENDPOINT_KEY); if(v) $id("endpoint").value=v; }catch(e){} }
 
   // ---------------- aggregation ----------------
-  function numList(grp, idx){ var out=[]; for(var i=0;i<grp.length;i++){ var n=Number(grp[i][idx]); if(grp[i][idx]!=="" && grp[i][idx]!==null && isFinite(n)) out.push(n); } return out; }
-  function aggOne(fn, field, grp){
-    var _tp=parseFieldToken(field);
-    if(_tp.part) return aggDatePart(fn, _tp.base, _tp.part, grp);
-    var idx = fieldIndex[field];
-    if(idx===undefined) throw new Error("Unknown field: "+field);
-    fn = fn.toUpperCase();
-    if(fn==="COUNT"){ var c=0; for(var i=0;i<grp.length;i++){ var v=grp[i][idx]; if(v!==""&&v!==null&&v!==undefined) c++; } return c; }
-    if(fn==="COUNTUNIQUE"){ var s=new Set(); for(var j=0;j<grp.length;j++){ var w=grp[j][idx]; if(w!==""&&w!==null&&w!==undefined) s.add(String(w)); } return s.size; }
-    var nums = numList(grp, idx);
+  // aggCore aggregates a list of already-collected non-empty values; aggOne is the only entry
+  // point and handles both plain fields and date-part tokens (it just collects values differently).
+  function aggCore(fn, vals){
+    if(fn==="COUNT") return vals.length;
+    if(fn==="COUNTUNIQUE"){ var s=new Set(); for(var i=0;i<vals.length;i++) s.add(String(vals[i])); return s.size; }
+    var nums=[]; for(var k=0;k<vals.length;k++){ var n=Number(vals[k]); if(isFinite(n)) nums.push(n); }
     if(fn==="COUNTNUMBERS") return nums.length;
     if(nums.length===0) return null;
-    var sum=0; for(var k=0;k<nums.length;k++) sum+=nums[k];
+    var sum=0; for(var j=0;j<nums.length;j++) sum+=nums[j];
     if(fn==="SUM") return sum;
     if(fn==="AVG"||fn==="AVERAGE") return sum/nums.length;
     if(fn==="MIN") return Math.min.apply(null,nums);
     if(fn==="MAX") return Math.max.apply(null,nums);
     if(fn==="STDEV"||fn==="VAR"){ var mean=sum/nums.length, sq=0; for(var x=0;x<nums.length;x++){ var d=nums[x]-mean; sq+=d*d; } var v=nums.length>1?sq/(nums.length-1):0; return fn==="VAR"?v:Math.sqrt(v); }
     throw new Error("Unknown function: "+fn);
+  }
+  function aggOne(fn, field, grp){
+    var tp=parseFieldToken(field), idx=fieldIndex[tp.base];
+    if(idx===undefined) throw new Error("Unknown field: "+tp.base);
+    fn=fn.toUpperCase();
+    var vals=[];
+    for(var i=0;i<grp.length;i++){
+      var v=grp[i][idx];
+      if(tp.part){ v=datePartValue(_s(v), tp.part); if(v==="") continue; }
+      else if(v===""||v===null||v===undefined) continue;
+      vals.push(v);
+    }
+    return aggCore(fn, vals);
   }
   var AGG_MAP = { "Sum":"SUM","Average":"AVG","Count":"COUNT","Count Numbers":"COUNTNUMBERS","Count Unique":"COUNTUNIQUE","Min":"MIN","Max":"MAX","StdDev":"STDEV","Var":"VAR" };
 
@@ -665,38 +677,27 @@
   function parseFieldToken(tok){ tok=String(tok); var i=tok.indexOf(DPART_SEP); return i<0 ? {base:tok, part:null} : {base:tok.slice(0,i), part:tok.slice(i+DPART_SEP.length)}; }
   function makeDateToken(base, part){ return base + DPART_SEP + part; }
   function fieldLabel(tok){ var p=parseFieldToken(tok); return p.part ? (p.base + " (" + p.part + ")") : p.base; }
+  // memoized per raw string + part: date parsing is the hot path when grouping ~20k rows by a
+  // date token, and the distinct raw date strings are few. Cleared on every data load.
+  var dpCache = {};
   function datePartValue(raw, part){
-    var t=parseDateVal(raw); if(t===null) return "";
-    var d=new Date(t), y=d.getUTCFullYear(), m=d.getUTCMonth();
-    if(part==="Year") return String(y);
-    if(part==="Quarter") return y + "-Q" + (Math.floor(m/3)+1);
-    if(part==="Month") return y + "-" + pad2(m+1);
-    if(part==="Day") return y + "-" + pad2(m+1) + "-" + pad2(d.getUTCDate());
-    return "";
+    var ck=part+":"+raw, hit=dpCache[ck];
+    if(hit!==undefined) return hit;
+    var out="", t=parseDateVal(raw);
+    if(t!==null){
+      var d=new Date(t), y=d.getUTCFullYear(), m=d.getUTCMonth();
+      if(part==="Year") out=String(y);
+      else if(part==="Quarter") out=y + "-Q" + (Math.floor(m/3)+1);
+      else if(part==="Month") out=y + "-" + pad2(m+1);
+      else if(part==="Day") out=y + "-" + pad2(m+1) + "-" + pad2(d.getUTCDate());
+    }
+    dpCache[ck]=out; return out;
   }
   // grouping value for a row/col field token (always a string; "" for blanks/unparseable dates)
   function tokenValue(row, tok){
     var p=parseFieldToken(tok), idx=fieldIndex[p.base];
     var raw=(idx===undefined)?"":row[idx]; raw=(raw===null||raw===undefined)?"":String(raw);
     return p.part ? datePartValue(raw, p.part) : raw;
-  }
-  // aggregate a date-part token used as a measure field
-  function aggDatePart(fn, base, part, grp){
-    var idx=fieldIndex[base]; if(idx===undefined) throw new Error("Unknown field: "+base);
-    fn=fn.toUpperCase();
-    var vals=[]; for(var i=0;i<grp.length;i++){ var dv=datePartValue(_s(grp[i][idx]), part); if(dv!=="") vals.push(dv); }
-    if(fn==="COUNT") return vals.length;
-    if(fn==="COUNTUNIQUE"){ var s=new Set(vals); return s.size; }
-    var nums=[]; for(var k=0;k<vals.length;k++){ var n=Number(vals[k]); if(isFinite(n)) nums.push(n); } // only Year is numeric
-    if(fn==="COUNTNUMBERS") return nums.length;
-    if(nums.length===0) return null;
-    var sum=0; for(var j=0;j<nums.length;j++) sum+=nums[j];
-    if(fn==="SUM") return sum;
-    if(fn==="AVG"||fn==="AVERAGE") return sum/nums.length;
-    if(fn==="MIN") return Math.min.apply(null,nums);
-    if(fn==="MAX") return Math.max.apply(null,nums);
-    if(fn==="STDEV"||fn==="VAR"){ var mean=sum/nums.length, sq=0; for(var x=0;x<nums.length;x++){ var dd=nums[x]-mean; sq+=dd*dd; } var vv=nums.length>1?sq/(nums.length-1):0; return fn==="VAR"?vv:Math.sqrt(vv); }
-    throw new Error("Unknown function: "+fn);
   }
 
   // ---------------- compute pivot ----------------
@@ -744,6 +745,24 @@
   // ---------------- render table ----------------
   function rowArrow(){ var s=cur().sort||{}; return s.key==="__row__"?(s.dir<0?" ▼":" ▲"):""; }
   function msrArrow(m){ var s=cur().sort||{}; return String(s.key)===String(m.id)?(s.dir<0?" ▼":" ▲"):""; }
+
+  // Fill pcell[prefix][colKey] / pall[prefix] with the rows under every row-tuple prefix of
+  // length 1..maxL — used by both the collapsible tree (maxL=rf.length: every node aggregates)
+  // and subtotal mode (maxL=rf.length-1: only non-leaf groups get subtotal rows).
+  function buildPrefixMaps(P, rf, cf, pcell, pall, maxL){
+    P.filtered.forEach(function(row){
+      var rt=[]; for(var c=0;c<rf.length;c++) rt.push(tokenValue(row, rf[c]));
+      var ct=[]; for(var c2=0;c2<cf.length;c2++) ct.push(tokenValue(row, cf[c2]));
+      var ck=ct.join(SEP);
+      for(var L=1; L<=maxL; L++){ var pk=rt.slice(0,L).join(SEP); var o=pcell[pk]||(pcell[pk]={}); (o[ck]||(o[ck]=[])).push(row); (pall[pk]||(pall[pk]=[])).push(row); }
+    });
+  }
+  function grandRowHtml(P, ms, cKeys, hasCol, cornerCols){
+    var h='<tr class="grand"><td class="rowhdr"'+(cornerCols>1?' colspan="'+cornerCols+'"':'')+'>Grand Total</td>';
+    if(hasCol){ cKeys.forEach(function(ck){ ms.forEach(function(m){ h+='<td class="val">'+fmt(measureValue(m,P.colGrp[ck]||[]))+'</td>'; }); }); ms.forEach(function(m){ h+='<td class="val gtot">'+fmt(measureValue(m,P.filtered))+'</td>'; }); }
+    else { ms.forEach(function(m){ h+='<td class="val">'+fmt(measureValue(m,P.filtered))+'</td>'; }); }
+    return h+'</tr>';
+  }
 
   function renderTable(P, el){
     var ms=P.ms, rf=P.rf, cf=P.cf, cKeys=P.cKeys, rKeys=P.rKeys;
@@ -807,13 +826,7 @@
     }
 
     if(collapsible){
-      // build prefix maps for ALL levels 1..rf.length (each node shows its group aggregate)
-      P.filtered.forEach(function(row){
-        var rt=[]; for(var c=0;c<rf.length;c++){ rt.push(tokenValue(row, rf[c])); }
-        var ct=[]; for(var c2=0;c2<cf.length;c2++){ ct.push(tokenValue(row, cf[c2])); }
-        var ck=ct.join(SEP);
-        for(var L=1; L<=rf.length; L++){ var pk=rt.slice(0,L).join(SEP); var o=pcell[pk]||(pcell[pk]={}); (o[ck]||(o[ck]=[])).push(row); (pall[pk]||(pall[pk]=[])).push(row); }
-      });
+      buildPrefixMaps(P, rf, cf, pcell, pall, rf.length); // every tree node shows its group aggregate
       var ordered=rKeys.slice().sort(function(a,b){ return cmpTuple(P.rkMeta[a],P.rkMeta[b]); });
       var root={children:{}, order:[]};
       ordered.forEach(function(rk){ var t=P.rkMeta[rk], node=root; for(var L=0;L<rf.length;L++){ var key=t[L]; if(!node.children[key]){ node.children[key]={children:{},order:[],tuple:t.slice(0,L+1)}; node.order.push(key); } node=node.children[key]; } });
@@ -826,12 +839,7 @@
           if(hasKids && !collapsed) emit(ch, level+1);
         });
       })(root, 0);
-      if(showTot){
-        html+='<tr class="grand"><td class="rowhdr">Grand Total</td>';
-        if(hasCol){ cKeys.forEach(function(ck){ ms.forEach(function(m){ html+='<td class="val">'+fmt(measureValue(m,P.colGrp[ck]||[]))+'</td>'; }); }); ms.forEach(function(m){ html+='<td class="val gtot">'+fmt(measureValue(m,P.filtered))+'</td>'; }); }
-        else { ms.forEach(function(m){ html+='<td class="val">'+fmt(measureValue(m,P.filtered))+'</td>'; }); }
-        html+='</tr>';
-      }
+      if(showTot) html+=grandRowHtml(P, ms, cKeys, hasCol, 1);
       html+='</tbody></table></div>'; el.innerHTML=html; return;
     }
 
@@ -857,16 +865,7 @@
     } else {
       // ----- subtotal mode: hierarchical order, subtotal rows after each non-leaf group -----
       var ordered=rKeys.slice().sort(function(a,b){ return cmpTuple(P.rkMeta[a],P.rkMeta[b]); });
-      // build prefix maps (prefix lengths 1..rf.length-1 are the non-leaf groups that get subtotals)
-      P.filtered.forEach(function(row){
-        var rt=[]; for(var c=0;c<rf.length;c++){ rt.push(tokenValue(row, rf[c])); }
-        var ct=[]; for(var c2=0;c2<cf.length;c2++){ ct.push(tokenValue(row, cf[c2])); }
-        var ck=ct.join(SEP);
-        for(var L=1; L<rf.length; L++){ var pk=rt.slice(0,L).join(SEP);
-          var o=pcell[pk]||(pcell[pk]={}); (o[ck]||(o[ck]=[])).push(row);
-          (pall[pk]||(pall[pk]=[])).push(row);
-        }
-      });
+      buildPrefixMaps(P, rf, cf, pcell, pall, rf.length-1); // only non-leaf groups get subtotal rows
       // display rows: detail leaves + subtotal markers
       var disp=[];
       ordered.forEach(function(rk,i){
@@ -903,19 +902,12 @@
       });
     }
 
-    if(showTot){
-      html+='<tr class="grand"><td class="rowhdr" colspan="'+cornerCols+'">Grand Total</td>';
-      if(hasCol){ cKeys.forEach(function(ck){ ms.forEach(function(m){ html+='<td class="val">'+fmt(measureValue(m,P.colGrp[ck]||[]))+'</td>'; }); });
-        ms.forEach(function(m){ html+='<td class="val gtot">'+fmt(measureValue(m,P.filtered))+'</td>'; });
-      } else { ms.forEach(function(m){ html+='<td class="val">'+fmt(measureValue(m,P.filtered))+'</td>'; }); }
-      html+='</tr>';
-    }
+    if(showTot) html+=grandRowHtml(P, ms, cKeys, hasCol, cornerCols);
     html+='</tbody></table></div>';
     el.innerHTML=html;
   }
 
   // ---------------- render chart ----------------
-  function blankify(v){ return dispLabel(v); }
   var HIER = { pie:1, treemap:1, sunburst:1, icicle:1 };
 
   function setHierNote(txt){ if(!IS_BUILDER_RENDER) return; var n=$id("hiernote"); if(txt){ n.style.display="inline"; n.textContent=txt; } else { n.style.display="none"; } }
@@ -927,13 +919,13 @@
     setHierNote("");
     var cd=chartBox(el);
     var ms=P.ms, rf=P.rf, cf=P.cf, rKeys=P.rKeys, cKeys=P.cKeys;
-    var x=rKeys.map(function(rk){ return P.rkMeta[rk].map(blankify).join(" / ")||"(all)"; });
+    var x=rKeys.map(function(rk){ return P.rkMeta[rk].map(dispLabel).join(" / ")||"(all)"; });
     var rawX=rKeys.map(function(rk){ var t=P.rkMeta[rk]; return (t&&t[0]!==undefined)?t[0]:""; }); // raw 1st row-field value per point, for click-to-filter
     var series=[];
     var groups = cf.length? cKeys : [null];
     groups.forEach(function(ck){
       ms.forEach(function(m){
-        var name=(ck!==null? (P.ckMeta[ck].map(blankify).join(" / ")+" · ") : "")+measureLabel(m);
+        var name=(ck!==null? (P.ckMeta[ck].map(dispLabel).join(" / ")+" · ") : "")+measureLabel(m);
         var y=rKeys.map(function(rk){ var grp; if(ck===null){ grp=P.rowGrp[rk]||[]; } else { var c=P.cell[rk]; grp=(c&&c[ck])?c[ck]:[]; } var v=measureValue(m,grp); return (v===null||!isFinite(v))?null:v; });
         series.push({ name:name, x:x, y:y, mid:m.id });
       });
@@ -971,7 +963,7 @@
 
     if(ct==="pie"){
       var labels=[], values=[], raws=[];
-      P.rKeys.forEach(function(rk){ var v=measureValue(m, P.rowGrp[rk]||[]); if(v!==null && isFinite(v) && v>0){ labels.push(P.rkMeta[rk].map(blankify).join(" / ")||"(all)"); values.push(v); raws.push(P.rkMeta[rk]); } });
+      P.rKeys.forEach(function(rk){ var v=measureValue(m, P.rowGrp[rk]||[]); if(v!==null && isFinite(v) && v>0){ labels.push(P.rkMeta[rk].map(dispLabel).join(" / ")||"(all)"); values.push(v); raws.push(P.rkMeta[rk]); } });
       cd._xraw=raws; // raw row-tuples aligned to pie slices, for click-to-filter
       Plotly.newPlot(cd, [{ type:"pie", labels:labels, values:values, marker:{line:{color:"#fff",width:1.5}}, textinfo:"label+percent", hovertemplate:"%{label}<br>%{value} (%{percent})<extra></extra>" }],
         $.extend({}, PLOT_BASE, { margin:{t:16,r:16,b:16,l:16}, height:chartH(el) }), {responsive:true, displayModeBar:IS_BUILDER_RENDER});
@@ -995,7 +987,7 @@
       P.filtered.forEach(function(row){ var t=rf.map(function(f){ return tokenValue(row, f); });
         for(var L=1; L<=rf.length; L++){ var key=t.slice(0,L).join(SEP); (groups[key]||(groups[key]=[])).push(row); } });
       Object.keys(groups).forEach(function(key){ var parts=key.split(SEP), depth=parts.length;
-        pushNode(key, blankify(parts[depth-1]), depth>1? parts.slice(0,depth-1).join(SEP):"", groups[key], depth===rf.length); });
+        pushNode(key, dispLabel(parts[depth-1]), depth>1? parts.slice(0,depth-1).join(SEP):"", groups[key], depth===rf.length); });
     }
     var tt=(ct==="treemap"||ct==="icicle") ? "%{label}<br>%{customdata}" : "%{label}";
     Plotly.newPlot(cd, [{ type:ct, ids:ids, labels:labels, parents:parents, values:sizes, customdata:reals, branchvalues:"remainder",
@@ -1125,14 +1117,15 @@
   // saved-measure (library) actions
   function findSaved(id){ var sm=state.savedMeasures||[]; for(var i=0;i<sm.length;i++){ if(String(sm[i].id)===String(id)) return sm[i]; } return null; }
   function clearCalcCaches(){ (state.values||[]).forEach(function(m){ if(m.kind==="calc"||m.kind==="ref") delete m._fn; }); (state.savedMeasures||[]).forEach(function(sm){ delete sm._fn; }); } // saved-measure edits change what referencing measures resolve to
-  // Renaming a saved measure rewrites every [old name] reference across all expressions so references survive renames.
-  function renameMeasureRefs(oldL, newL){
-    if(!oldL || oldL===newL) return;
+  // Rewrites every [old name] reference across all calc expressions (builder values, saved
+  // measures, and each dashboard tile's values) — shared by measure AND field renames.
+  function rewriteExprRefs(oldL, newL){
     var find="["+oldL+"]", repl="["+newL+"]";
     function fixArr(arr){ (arr||[]).forEach(function(m){ if(m && typeof m.expr==="string" && m.expr.indexOf(find)>=0){ m.expr=m.expr.split(find).join(repl); delete m._fn; } }); }
     fixArr(state.savedMeasures); fixArr(state.values);
     ((state.dash&&state.dash.tabs)||[]).forEach(function(tab){ (tab.tiles||[]).forEach(function(t){ if(t.cfg) fixArr(t.cfg.values); }); });
   }
+  function renameMeasureRefs(oldL, newL){ if(oldL && oldL!==newL) rewriteExprRefs(oldL, newL); }
   // Renaming a raw field rewrites every place its name is stored as a string: Rows/Cols/Filters
   // lists, base-measure .field (including date-part tokens like "OrderDate⟨▸⟩Month", whose base
   // gets swapped), exclusion keys, and calc-expression [Field] tokens — across the builder AND
@@ -1155,12 +1148,10 @@
       if(cfg.exclusions && cfg.exclusions.hasOwnProperty(oldName)){ cfg.exclusions[newName]=cfg.exclusions[oldName]; delete cfg.exclusions[oldName]; }
     }
     fixCfg(state);
-    var find="["+oldName+"]", repl="["+newName+"]";
-    function fixExprArr(arr){ (arr||[]).forEach(function(m){ if(m && typeof m.expr==="string" && m.expr.indexOf(find)>=0){ m.expr=m.expr.split(find).join(repl); delete m._fn; } }); }
-    fixExprArr(state.savedMeasures); fixExprArr(state.values);
+    rewriteExprRefs(oldName, newName); // covers builder values, saved measures, and every tile's calc exprs
     ((state.dash&&state.dash.tabs)||[]).forEach(function(tab){
       (tab.tiles||[]).forEach(function(t){
-        if(t.cfg){ fixCfg(t.cfg); fixExprArr(t.cfg.values); }
+        if(t.cfg) fixCfg(t.cfg);
         if(t.kind==="slicer" && t.field===oldName) t.field=newName;
       });
       if(tab.global && tab.global.hasOwnProperty(oldName)){ tab.global[newName]=tab.global[oldName]; delete tab.global[oldName]; }
@@ -1231,11 +1222,8 @@
   }
   function syncFromDOM(){
     ["rows","cols","filters"].forEach(function(b){ state[b]=$("#b-"+b+" > li").map(function(){ return $(this).data("field"); }).get(); });
-    // values: reorder by id, keep specs
-    var order=$("#b-values > li").map(function(){ return String($(this).data("id")); }).get();
     var byId={}; state.values.forEach(function(m){ byId[m.id]=m; });
-    var moved=$("#b-values > li").map(function(){ return $(this).data("field"); }).get(); // base fields dragged in from row/col buckets are plain
-    // rebuild values: known ids first; any li without matching id (dragged plain field) -> new base measure
+    // rebuild values: known ids keep their spec; a li without a matching id (a plain field dragged in from another bucket) -> new base measure
     var nv=[];
     $("#b-values > li").each(function(){ var $li=$(this); var id=$li.data("id"); if(id!==undefined && byId[id]) nv.push(byId[id]); else { var f=$li.data("field"); if(f) nv.push({id:"m"+(uid++),kind:"base",field:f,agg:defaultAgg(f)}); } });
     state.values=nv;
@@ -1318,7 +1306,7 @@
   function fltList(q){
     var $l=$flt.find(".list").empty(); q=(q||"").toLowerCase();
     var match=function(v){ return !q || dispLabel(v).toLowerCase().indexOf(q)>=0 || v.toLowerCase().indexOf(q)>=0; };
-    var frag=document.createDocumentFragment(), shownCount=0;
+    var frag=document.createDocumentFragment();
 
     if(fstate.isDate){
       var anyOpen=!!q; // searching auto-expands
@@ -1332,7 +1320,7 @@
             var M=Y.months[mk]; if(!M.vals.some(match)) return;
             frag.appendChild(groupRow(M.label, M.vals, "m:"+mk, true, "mon"));
             if(anyOpen || fstate.open.has("m:"+mk)){
-              M.vals.forEach(function(v){ if(match(v)){ frag.appendChild(leafRow(v,"lf")); matched++; if(matched<=400) shownCount++; } });
+              M.vals.forEach(function(v){ if(match(v)) frag.appendChild(leafRow(v,"lf")); });
             }
           });
         }
@@ -1366,10 +1354,10 @@
     $id("calc-err").textContent="";
     // default unchecked: editing without saving makes it chart-specific (fx). Check to keep it linked (🔗).
     $id("calc-save").checked=false; $id("calc-save-wrap").style.display="";
-    $(".save-toggle .sl-hint, .save-toggle b").first().text(isRef ? "Update the saved measure (keeps the 🔗 link)" : "Save as a reusable measure");
+    $(".save-toggle b").first().text(isRef ? "Update the saved measure (keeps the 🔗 link)" : "Save as a reusable measure");
     $id("calc-add").textContent = m ? "Save" : "Add measure";
     $(".h", $calc).text(m ? "Edit calculated measure" : "Calculated measure");
-    $calc.css({display:"block", top:"110px", left:Math.max(8,(window.innerWidth-420)/2)+"px"});
+    showPop($calc, 420, 110);
     $id("calc-name").focus();
   }
   function openSavedMeasureDialog(sm){
@@ -1377,7 +1365,7 @@
     $id("calc-name").value=sm.label||""; $id("calc-expr").value=sm.expr||""; $id("calc-err").textContent="";
     $id("calc-save-wrap").style.display="none";
     $id("calc-add").textContent="Save"; $(".h", $calc).text("Edit saved measure");
-    $calc.css({display:"block", top:"110px", left:Math.max(8,(window.innerWidth-420)/2)+"px"});
+    showPop($calc, 420, 110);
     $id("calc-name").focus();
   }
   $id("add-calc").addEventListener("click", function(){ openCalcDialog(null); });
@@ -1468,6 +1456,7 @@
     else if(vis("slicer")){ dlg="slicer"; ok="slicer-ok"; cancel="slicer-cancel"; }
     else if(vis("xfilter")){ dlg="xfilter"; ok="xf-ok"; cancel="xf-cancel"; }
     else if(vis("impdlg")){ if(e.key==="Escape"){ e.preventDefault(); $id("imp-cancel").click(); } return; }
+    else if(vis("expdlg")){ dlg="expdlg"; ok="exp-ok"; cancel="exp-cancel"; }
     else if(vis("flt")){
       if(e.key==="Escape"){ e.preventDefault(); $("#flt .cancel").click(); }
       else if(e.key==="Enter" && !inTextarea){ e.preventDefault(); $("#flt .apply").click(); }
@@ -1735,7 +1724,7 @@
   }
   function resizeTile(el){ var box=el.querySelector(".chartbox"); if(box && window.Plotly) try{ Plotly.Plots.resize(box); }catch(e){} }
   function resizeAllCharts(){ setTimeout(function(){ $("#grid .chartbox").each(function(){ try{ Plotly.Plots.resize(this); }catch(e){} }); }, 60); }
-  function renderTiles(){ var self=this; $("#grid .grid-stack-item").each(function(){ var t=findTile(this.getAttribute("gs-id")); if(t) paintTile(t, this); }); resizeAllCharts(); }
+  function renderTiles(){ $("#grid .grid-stack-item").each(function(){ var t=findTile(this.getAttribute("gs-id")); if(t) paintTile(t, this); }); resizeAllCharts(); }
   function reRenderDataTiles(exceptId){ $("#grid .grid-stack-item").each(function(){ var id=this.getAttribute("gs-id"); if(exceptId && id===String(exceptId)) return; var t=findTile(id); if(t && t.kind!=="slicer") paintTile(t, this); }); resizeAllCharts(); }
 
   // ---- slicer rendering & interactions ----
@@ -1819,7 +1808,7 @@
     var list=activeTab().tiles.filter(function(t){ return t.id!==tile.id && t.kind!=="slicer"; });
     wrap.innerHTML = list.length ? list.map(function(t){ return '<label style="display:flex;gap:6px;align-items:center;font-size:13px;padding:2px 0;"><input type="checkbox" class="xf-target" value="'+t.id+'"'+(sel[t.id]?" checked":"")+' /> '+esc(t.title)+'</label>'; }).join("") : '<div style="color:var(--muted);font-size:12px;">No other tiles on this tab yet.</div>';
     wrap.style.display = $id("xf-all").checked ? "none" : "";
-    $xf.css({display:"block", top:"90px", left:Math.max(8,(window.innerWidth-360)/2)+"px"});
+    showPop($xf, 360);
   }
   $id("xf-all").addEventListener("change", function(){ $id("xf-targets").style.display=this.checked?"none":""; });
   $id("xf-cancel").addEventListener("click", function(){ $xf.hide(); xfEditId=null; });
@@ -1845,7 +1834,7 @@
     $id("slicer-all").checked = tile ? (tile.allTargets!==false) : true;
     renderSlicerTargets(tile);
     $("#slicer .h").text(tile?"Edit slicer":"Slicer"); $id("slicer-ok").textContent = tile?"Save":"Add slicer";
-    $slicer.css({display:"block", top:"90px", left:Math.max(8,(window.innerWidth-360)/2)+"px"});
+    showPop($slicer, 360);
   }
   $id("slicer-all").addEventListener("change", function(){ $id("slicer-targets").style.display=this.checked?"none":""; });
   $id("add-slicer").addEventListener("click", function(){ if(!headers.length){ return; } openSlicerDialog(null); });
@@ -1862,8 +1851,8 @@
     var c=JSON.parse(JSON.stringify(cfg));
     state.rows=c.rows||[]; state.cols=c.cols||[]; state.filters=c.filters||[]; state.values=c.values||[]; state.exclusions=c.exclusions||{};
     state.view=c.view||"table"; state.chartType=c.chartType||"bar"; state.sort=c.sort||{key:"__row__",dir:1};
-    state.totals=c.totals!==false; state.subtotals=c.subtotals===true; state.collapsible=c.collapsible===true; state.collapsed=c.collapsed||{}; state.chartOpts=c.chartOpts||{legend:true,labels:false,combo:{}};
-    var mx=0; state.values.forEach(function(v){ var nn=parseInt(String(v.id).replace(/\D/g,''),10); if(nn>mx)mx=nn; }); uid=mx+1;
+    state.totals=c.totals!==false; state.subtotals=c.subtotals===true; state.collapsible=c.collapsible===true; state.collapsed=c.collapsed||{}; state.chartOpts=c.chartOpts||defaultChartOpts();
+    reinitCounters();
     renderBuckets(); applyStateToControls(); rerender();
   }
 
@@ -1876,7 +1865,7 @@
   function clearBuilder(){
     state.rows=[]; state.cols=[]; state.filters=[]; state.values=[]; state.exclusions={};
     state.view="table"; state.chartType="bar"; state.sort={key:"__row__",dir:1}; state.totals=true; state.subtotals=false; state.collapsible=false; state.collapsed={};
-    state.chartOpts={legend:true,labels:false,labelSeries:false,combo:{},kpiColor:"#003049"};
+    state.chartOpts=defaultChartOpts();
     setEditingTile(null); renderBuckets(); applyStateToControls(); rerender();
   }
   $id("newchart").addEventListener("click", function(){ clearBuilder(); setMode("builder"); });
@@ -1895,7 +1884,7 @@
     $id("pin-newtab-wrap").style.display="none"; $id("pin-newtab").value="";
     $(".h",$pin).text(editing?"Update tile":"Pin to dashboard");
     $id("pin-ok").textContent = editing?"Update tile":"Add tile";
-    $pin.css({display:"block", top:"100px", left:Math.max(8,(window.innerWidth-340)/2)+"px"}); $id("pin-title").focus();
+    showPop($pin, 340, 100); $id("pin-title").focus();
   }
   $id("pin-tab").addEventListener("change", function(){ $id("pin-newtab-wrap").style.display = (this.value==="__new__")?"":"none"; if(this.value==="__new__") $id("pin-newtab").focus(); });
   $id("pinbtn").addEventListener("click", function(){
@@ -1923,7 +1912,7 @@
   });
 
   // ---------------- load ----------------
-  function applyStateToControls(){ $("#viewseg button").removeClass("on").filter('[data-view="'+state.view+'"]').addClass("on"); $("#charttype").val(state.chartType); $("#tg-totals").prop("checked", state.totals!==false); $("#tg-subtot").prop("checked", state.subtotals===true); $("#tg-collapsible").prop("checked", state.collapsible===true); var co=state.chartOpts||(state.chartOpts={legend:true,labels:false,combo:{}}); $("#opt-legend").prop("checked", co.legend!==false); $("#opt-labels").prop("checked", co.labels===true); $("#opt-labelseries").prop("checked", co.labelSeries===true); updateChartUI(); }
+  function applyStateToControls(){ $("#viewseg button").removeClass("on").filter('[data-view="'+state.view+'"]').addClass("on"); $("#charttype").val(state.chartType); $("#tg-totals").prop("checked", state.totals!==false); $("#tg-subtot").prop("checked", state.subtotals===true); $("#tg-collapsible").prop("checked", state.collapsible===true); var co=state.chartOpts||(state.chartOpts=defaultChartOpts()); $("#opt-legend").prop("checked", co.legend!==false); $("#opt-labels").prop("checked", co.labels===true); $("#opt-labelseries").prop("checked", co.labelSeries===true); updateChartUI(); }
 
   // ---- ingest: accept more JSON shapes than the native { headers, rows } ----
   // Recognizes: (1) { headers:[...], rows:[[...]] } (native — passthrough, extra keys ignored),
@@ -2004,6 +1993,7 @@
         tParse=Date.now()-t0-tNet;
         if(d&&d.error) throw new Error("Endpoint returned: "+d.error);
         var tbl=reshapeToTable(d, url);
+        dpCache={}; // fresh data -> stale date-part memo
         // apply user field renames (state.fieldAliases, keyed by raw source name) to the freshly-fetched headers,
         // so a rename survives a Refresh data / new session instead of only affecting the current in-memory state
         var aliases=state.fieldAliases||{};
@@ -2043,8 +2033,7 @@
   function applyHistoryState(json){
     hist.lock=true;
     state=JSON.parse(json);
-    if(!state.chartOpts) state.chartOpts={legend:true,labels:false,combo:{}};
-    var mx=0; (state.values||[]).forEach(function(v){ var n=parseInt(String(v.id).replace(/\D/g,''),10); if(n>mx)mx=n; }); uid=mx+1;
+    normalizeState();
     hist.last=JSON.stringify(state);
     renderBuckets(); applyStateToControls(); rerender();
     hist.lock=false; updateUndoBtns();
@@ -2068,14 +2057,30 @@
     (((state.dash||{}).tabs)||[]).forEach(function(tb){ var tn=parseInt(String(tb.id).replace(/\D/g,''),10); if(tn>=tabuid) tabuid=tn+1; (tb.tiles||[]).forEach(function(t){ var n=parseInt(String(t.id).replace(/\D/g,''),10); if(n>=tuid) tuid=n+1; }); });
   }
   var DEFAULT_DASHNAME = "Nagpur MS Allocation";
-  function freshState(){ return { rows:[],cols:[],filters:[],values:[],savedMeasures:[],exclusions:{},view:"table",chartType:"bar",sort:{key:"__row__",dir:1},totals:true,subtotals:false,collapsible:false,collapsed:{},chartOpts:{legend:true,labels:false,labelSeries:false,combo:{},kpiColor:"#003049"},mode:"builder",dash:freshDash(),dashName:DEFAULT_DASHNAME,fieldAliases:{} }; }
+  function freshState(){ return { rows:[],cols:[],filters:[],values:[],savedMeasures:[],exclusions:{},view:"table",chartType:"bar",sort:{key:"__row__",dir:1},totals:true,subtotals:false,collapsible:false,collapsed:{},chartOpts:defaultChartOpts(),mode:"builder",dash:freshDash(),dashName:DEFAULT_DASHNAME,fieldAliases:{} }; }
   function syncDashName(){ $id("dashname").textContent = state.dashName || DEFAULT_DASHNAME; }
+  // Backfills every field an older state (localStorage, import file, history snapshot) may lack,
+  // migrates pre-tab dashboards, and re-derives the id counters. The ONE place state shape is fixed up.
+  function normalizeState(){
+    if(!state.values) state.values=[];
+    if(!state.savedMeasures) state.savedMeasures=[];
+    if(!state.exclusions) state.exclusions={};
+    if(!state.collapsed) state.collapsed={};
+    if(!state.chartOpts) state.chartOpts=defaultChartOpts();
+    if(!state.dash) state.dash=freshDash();
+    // migrate old single-board dashboards (tiles/global at top level) into one tab
+    if(state.dash.tiles && !state.dash.tabs){ state.dash={ tabs:[{ id:"tab1", name:"Tab 1", tiles:state.dash.tiles||[], global:state.dash.global||{} }], activeTabId:"tab1", cols:state.dash.cols||10, cellH:state.dash.cellH||44 }; }
+    if(!state.dash.tabs || !state.dash.tabs.length){ state.dash.tabs=[{id:"tab1",name:"Tab 1",tiles:[],global:{}}]; state.dash.activeTabId="tab1"; }
+    if(!state.dashName) state.dashName=DEFAULT_DASHNAME;
+    if(!state.fieldAliases) state.fieldAliases={};
+    reinitCounters();
+  }
 
   var $exp=$("#expdlg");
   function openExportDialog(){
     $id("exp-dashname").value = state.dashName || DEFAULT_DASHNAME;
     $id("exp-filename").value = "sse-bi-"+new Date().toISOString().slice(0,10);
-    $exp.css({display:"block", top:"90px", left:Math.max(8,(window.innerWidth-400)/2)+"px"});
+    showPop($exp, 400);
     $id("exp-dashname").focus();
   }
   function exportWorkspace(){
@@ -2091,13 +2096,7 @@
   function applyWorkspace(payload){
     if(!payload || typeof payload!=="object" || !payload.state) throw new Error("Not a valid SSE-BI workspace file.");
     state=payload.state;
-    if(!state.chartOpts) state.chartOpts={legend:true,labels:false,labelSeries:false,combo:{},kpiColor:"#003049"};
-    if(!state.savedMeasures) state.savedMeasures=[];
-    if(!state.collapsed) state.collapsed={};
-    if(!state.dash || !state.dash.tabs) state.dash=freshDash();
-    if(!state.dashName) state.dashName=DEFAULT_DASHNAME;
-    if(!state.fieldAliases) state.fieldAliases={};
-    reinitCounters();
+    normalizeState();
     if(payload.endpoint){ $id("endpoint").value=payload.endpoint; saveEndpoint(); }
     if(gridApi){ try{ gridApi.removeAll(); }catch(e){} }
     setEditingTile(null); hist.undo=[]; hist.redo=[]; hist.last=null;
@@ -2146,7 +2145,7 @@
       });
     }).catch(function(){ listEl.innerHTML='<div style="color:var(--muted)">Couldn’t list this folder (not GitHub, private, or API rate-limited). Use the file picker below.</div>'; });
   }
-  function openImport(){ $id("imp-err").textContent=""; $id("imp-file").value=""; $imp.css({display:"block", top:"90px", left:Math.max(8,(window.innerWidth-400)/2)+"px"}); loadGithubList(); }
+  function openImport(){ $id("imp-err").textContent=""; $id("imp-file").value=""; showPop($imp, 400); loadGithubList(); }
   $id("importbtn").addEventListener("click", openImport);
   $id("imp-cancel").addEventListener("click", function(){ $imp.hide(); });
   $(document).on("click", "#imp-list .imp-item", function(){
@@ -2167,14 +2166,7 @@
   });
 
   loadState();
-  if(!state.savedMeasures) state.savedMeasures=[];
-  if(!state.dash) state.dash=freshDash();
-  // migrate old single-board dashboards (tiles/global at top level) into one tab
-  if(state.dash.tiles && !state.dash.tabs){ state.dash={ tabs:[{ id:"tab1", name:"Tab 1", tiles:state.dash.tiles||[], global:state.dash.global||{} }], activeTabId:"tab1", cols:state.dash.cols||10, cellH:state.dash.cellH||44 }; }
-  if(!state.dash.tabs || !state.dash.tabs.length){ state.dash.tabs=[{id:"tab1",name:"Tab 1",tiles:[],global:{}}]; state.dash.activeTabId="tab1"; }
-  if(!state.dashName) state.dashName=DEFAULT_DASHNAME;
-  if(!state.fieldAliases) state.fieldAliases={};
-  reinitCounters();
+  normalizeState();
   loadEndpoint(); syncDashName();
   load();
 })();
