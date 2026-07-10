@@ -785,6 +785,22 @@
     var raw=(idx===undefined)?"":row[idx]; raw=(raw===null||raw===undefined)?"":String(raw);
     return p.part ? datePartValue(raw, p.part) : raw;
   }
+  // distinct values for a plain field (precomputed in `distinct`) OR a date-part token (derived by
+  // scanning the full dataset once, then cached — needed for the Filters popup to work on tokens
+  // like "OrderDate⟨▸⟩Month", not just the raw base field). Zero-padded token strings ("2026-03",
+  // "2026-Q1") sort correctly with a plain string sort, so no special comparator is needed.
+  var tokenDistinctCache={};
+  function distinctForToken(field){
+    var p=parseFieldToken(field);
+    if(!p.part) return distinct[field];
+    if(tokenDistinctCache[field]) return tokenDistinctCache[field];
+    var idx=fieldIndex[p.base]; if(idx===undefined) return null;
+    var seen=new Set(), arr=[];
+    for(var i=0;i<rows.length;i++){ var dv=datePartValue(_s(rows[i][idx]), p.part); if(dv!=="" && !seen.has(dv)){ seen.add(dv); arr.push(dv); } }
+    arr.sort();
+    tokenDistinctCache[field]=arr;
+    return arr;
+  }
 
   // ---------------- compute pivot ----------------
   // CTX is the config currently being rendered (the builder `state`, or a dashboard tile's
@@ -792,7 +808,18 @@
   var CTX=null, IS_BUILDER_RENDER=true;
   function cur(){ return CTX||state; }
   // Build O(1) lookup Sets for active exclusions once per compute (indexOf over big arrays was the hotspot).
-  function buildExclusionSets(exObj){ var list=[]; for(var f in (exObj||{})){ var ex=exObj[f]; if(!ex||!ex.length) continue; var idx=fieldIndex[f]; if(idx===undefined) continue; list.push({ idx:idx, set:(ex instanceof Set)?ex:new Set(ex) }); } return list; }
+  // An exclusion key may be a plain field OR a date-part token (Filters now accepts both) — for a
+  // token, the excluded SET holds derived values ("2026-03"), so the row's value must be run through
+  // datePartValue first, not compared raw, or the exclusion would silently match nothing.
+  function buildExclusionSets(exObj){
+    var list=[];
+    for(var f in (exObj||{})){
+      var ex=exObj[f]; if(!ex||!ex.length) continue;
+      var p=parseFieldToken(f), idx=fieldIndex[p.base]; if(idx===undefined) continue;
+      list.push({ idx:idx, part:p.part, set:(ex instanceof Set)?ex:new Set(ex) });
+    }
+    return list;
+  }
 
   function compute(){
     var C=cur(); var rf=C.rows||[], cf=C.cols||[], ms=C.values||[];
@@ -800,7 +827,11 @@
     var filtered=[];
     for(var i=0;i<rows.length;i++){
       var row=rows[i], ok=true;
-      for(var e=0;e<nEx;e++){ var v=row[exList[e].idx]; v=(v===null||v===undefined)?"":String(v); if(exList[e].set.has(v)){ ok=false; break; } }
+      for(var e=0;e<nEx;e++){
+        var raw=row[exList[e].idx]; raw=(raw===null||raw===undefined)?"":String(raw);
+        var v = exList[e].part ? datePartValue(raw, exList[e].part) : raw;
+        if(exList[e].set.has(v)){ ok=false; break; }
+      }
       if(ok) filtered.push(row);
     }
 
@@ -1158,7 +1189,7 @@
         DATE_PARTS.forEach(function(part){
           var tok=makeDateToken(h,part);
           html+='<div class="field-row sub" data-field="'+esc(tok)+'"><span class="fname" title="'+esc(h)+' ('+part+')">'+part+'</span>'+
-            '<span class="adds"><button data-add="rows">R</button><button data-add="cols">C</button><button data-add="values">Σ</button></span></div>';
+            '<span class="adds"><button data-add="rows">R</button><button data-add="cols">C</button><button data-add="values">Σ</button><button data-add="filters">⏚</button></span></div>';
         });
         html+='</div>';
       }
@@ -1176,7 +1207,7 @@
 
   // Summarize a filter: how many values are selected, and the single value if exactly one.
   function filterInfo(field, exclArr){
-    var all=distinct[field]||[], ex=exclArr||[], total=all.length, inc=total-ex.length, one=null;
+    var all=distinctForToken(field)||[], ex=exclArr||[], total=all.length, inc=total-ex.length, one=null;
     if(ex.length && inc===1){ var s={}; ex.forEach(function(v){ s[v]=1; }); for(var i=0;i<all.length;i++){ if(!s[all[i]]){ one=all[i]; break; } } }
     return { total:total, exCount:ex.length, inc:inc, one:one, active:ex.length>0 };
   }
@@ -1261,7 +1292,13 @@
       if(!cfg) return;
       fixList(cfg.rows); fixList(cfg.cols); fixList(cfg.filters);
       (cfg.values||[]).forEach(function(m){ if(m.kind==="base") m.field=renameFieldToken(m.field, oldName, newName); });
-      if(cfg.exclusions && cfg.exclusions.hasOwnProperty(oldName)){ cfg.exclusions[newName]=cfg.exclusions[oldName]; delete cfg.exclusions[oldName]; }
+      // exclusion keys can now be date-part tokens too (Filters bucket accepts them) — rename any
+      // key whose token base matches, not just an exact plain-field-name match.
+      if(cfg.exclusions){
+        var renamed={};
+        for(var k in cfg.exclusions){ if(cfg.exclusions.hasOwnProperty(k)) renamed[renameFieldToken(k, oldName, newName)]=cfg.exclusions[k]; }
+        cfg.exclusions=renamed;
+      }
     }
     fixCfg(state);
     rewriteExprRefs(oldName, newName); // covers builder values, saved measures, and every tile's calc exprs
@@ -1393,10 +1430,14 @@
   function isDateField(vals){ var n=0,ok=0; for(var i=0;i<vals.length && i<300;i++){ var v=vals[i]; if(v==="") continue; n++; if(parseDateVal(v)!==null) ok++; } return n>0 && ok/n>0.7; }
 
   // opts (optional): { src: exclusionsObject, onApply: fn }. Defaults to the builder's state.exclusions.
+  // `field` may be a plain header OR a date-part token (e.g. "OrderDate⟨▸⟩Month") — the Year/Month
+  // tree view only applies to a raw date field itself; a token's values ARE already one derived
+  // level (e.g. "2026-03"), so it's shown as a flat, chronologically-sorted list like any other field.
   function openFilter(field, anchor, opts){
-    if(!distinct[field]) return;
+    var vals=distinctForToken(field); if(!vals) return;
     fltTarget = opts || { src: state.exclusions, onApply: function(){ renderBuckets(); rerender(); } };
-    var vals=distinct[field]||[], isDate=isDateField(vals), ts={}, sorted=vals;
+    var isTok = !!parseFieldToken(field).part;
+    var isDate = !isTok && isDateField(vals), ts={}, sorted=vals;
     if(isDate){
       vals.forEach(function(v){ ts[v]=parseDateVal(v); });
       sorted=vals.slice().sort(function(a,b){ var ta=ts[a],tb=ts[b]; if(ta===null&&tb===null) return a.localeCompare(b); if(ta===null) return 1; if(tb===null) return -1; return ta-tb; });
@@ -1416,13 +1457,13 @@
       });
     }
     fstate={ field:field, excl:new Set((fltTarget.src[field])||[]), isDate:isDate, sorted:sorted, tree:tree, open:new Set() };
-    $flt.find(".t").text(field); $flt.find(".s").val(""); fltList("");
+    $flt.find(".t").text(fieldLabel(field)); $flt.find(".s").val(""); fltList("");
     var r=anchor.getBoundingClientRect();
     $flt.css({ top:Math.max(8,Math.min(r.bottom+4, window.innerHeight-380))+"px", left:Math.max(8,Math.min(r.left, window.innerWidth-296))+"px", display:"block" });
     $flt.find(".s").focus();
   }
 
-  function selectOnly(keep){ var k=new Set(keep); fstate.excl=new Set(); (distinct[fstate.field]||[]).forEach(function(v){ if(!k.has(v)) fstate.excl.add(v); }); fltList($flt.find(".s").val()); }
+  function selectOnly(keep){ var k=new Set(keep); fstate.excl=new Set(); (distinctForToken(fstate.field)||[]).forEach(function(v){ if(!k.has(v)) fstate.excl.add(v); }); fltList($flt.find(".s").val()); }
   function grpState(vals){ var inc=0; for(var i=0;i<vals.length;i++){ if(!fstate.excl.has(vals[i])) inc++; } return inc===0?"none":(inc===vals.length?"all":"some"); }
   function toggleGroup(vals){ var st=grpState(vals); if(st==="all"){ vals.forEach(function(v){ fstate.excl.add(v); }); } else { vals.forEach(function(v){ fstate.excl.delete(v); }); } }
 
@@ -1483,7 +1524,7 @@
   }
   $flt.find(".s").on("input", function(){ fltList(this.value); });
   $flt.find(".all").on("click", function(){ fstate.excl.clear(); fltList($flt.find(".s").val()); });
-  $flt.find(".none").on("click", function(){ (distinct[fstate.field]||[]).forEach(function(v){ fstate.excl.add(v); }); fltList($flt.find(".s").val()); });
+  $flt.find(".none").on("click", function(){ (distinctForToken(fstate.field)||[]).forEach(function(v){ fstate.excl.add(v); }); fltList($flt.find(".s").val()); });
   $flt.find(".cancel").on("click", function(){ $flt.hide(); fstate=null; });
   $flt.find(".apply").on("click", function(){ var a=Array.from(fstate.excl); if(a.length) fltTarget.src[fstate.field]=a; else delete fltTarget.src[fstate.field]; var cb=fltTarget.onApply; $flt.hide(); fstate=null; if(cb) cb(); });
   document.addEventListener("mousedown", function(e){ if(fstate && !e.target.closest("#flt") && !e.target.closest("[data-act=filter]")) { $flt.hide(); fstate=null; } });
@@ -1790,7 +1831,7 @@
       if(s.kind!=="chart" || !s.xfilter || !s.xfilter.on || !s.xsel || s.id===tileId) return;
       if(!(s.xfilter.allTargets || (s.xfilter.targets||[]).indexOf(tileId)>=0)) return;
       var pairs=Array.isArray(s.xsel)? s.xsel : (s.xsel.field?[s.xsel]:[]); // [{field,value},…] path (back-compat for old single)
-      pairs.forEach(function(p){ if(!p||!p.field) return; var field=p.field, val=String(p.value), all=distinct[field]||[]; var arr=out[field]||(out[field]=[]); all.forEach(function(v){ if(String(v)!==val && arr.indexOf(v)<0) arr.push(v); }); });
+      pairs.forEach(function(p){ if(!p||!p.field) return; var field=p.field, val=String(p.value), all=distinctForToken(field)||[]; var arr=out[field]||(out[field]=[]); all.forEach(function(v){ if(String(v)!==val && arr.indexOf(v)<0) arr.push(v); }); });
     });
     return out;
   }
@@ -2179,7 +2220,7 @@
         tParse=Date.now()-t0-tNet;
         if(d&&d.error) throw new Error("Endpoint returned: "+d.error);
         var tbl=reshapeToTable(d, url);
-        dpCache={}; // fresh data -> stale date-part memo
+        dpCache={}; tokenDistinctCache={}; // fresh data -> stale date-part memo / token distinct cache
         // apply user field renames (state.fieldAliases, keyed by raw source name) to the freshly-fetched headers,
         // so a rename survives a Refresh data / new session instead of only affecting the current in-memory state
         var aliases=state.fieldAliases||{};
