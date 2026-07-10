@@ -145,6 +145,9 @@
   #calc input, #calc textarea { width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:6px; font-size:14px; }
   #expdlg label.lbl { display:block; font-size:13px; color:var(--muted); margin:0 0 3px; }
   #expdlg input { width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:6px; font-size:14px; box-sizing:border-box; }
+  #measopts label.lbl { display:block; font-size:13px; color:var(--muted); margin:0 0 3px; }
+  #measopts input[type=text], #measopts input[type=number], #measopts select { width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:6px; font-size:14px; box-sizing:border-box; }
+  #measopts input[type=color] { vertical-align:middle; margin-left:4px; }
   #calc textarea { font-family:ui-monospace,Menlo,monospace; min-height:60px; resize:vertical; }
   #calc .hint { font-size:13px; color:var(--muted); margin-top:6px; }
   #calc .hint code, .save-toggle code { background:var(--surface); border:1px solid var(--border); border-radius:4px; padding:0 4px; font-size:12px; }
@@ -314,6 +317,7 @@
       <label class="tg" id="totals-wrap"><input type="checkbox" id="tg-totals" checked /> Totals</label>
       <button id="copybtn" title="Copy the current table to the clipboard">⧉ Copy</button>
       <button id="csvbtn" title="Download the current table as CSV">⬇ CSV</button>
+      <button id="pngbtn" style="display:none;" title="Download the current chart as a PNG image">⬇ PNG</button>
       <button id="newchart" title="Start a blank chart (clears the builder)">✛ New chart</button>
       <button id="pincancel" style="display:none;" title="Stop editing this tile">Cancel edit</button>
       <button id="pinbtn" class="primary" title="Save this view as a dashboard tile">📌 Pin to dashboard</button>
@@ -323,6 +327,7 @@
       <label><input type="checkbox" id="opt-legend" checked /> Legend</label>
       <label><input type="checkbox" id="opt-labels" /> Data labels</label>
       <label><input type="checkbox" id="opt-labelseries" /> Include series in label</label>
+      <label>Sort <select id="chart-sort"><option value="row">Original order</option><option value="asc">By value ↑</option><option value="desc">By value ↓</option></select></label>
       <div id="combo-cfg"></div>
     </div>
 
@@ -427,6 +432,38 @@
   <div class="foot"><button id="exp-cancel">Cancel</button><button id="exp-ok" class="primary">⬇ Download</button></div>
 </div>
 
+<!-- measure options: format / show-as / color scale (table view) -->
+<div id="measopts" class="pop" style="width:340px;">
+  <div class="h" style="padding:10px 12px;border-bottom:1px solid var(--border);font-weight:600;">Measure options</div>
+  <div class="body2" style="padding:12px;">
+    <label class="lbl">Show values as</label>
+    <select id="mo-showas">
+      <option value="value">Value</option>
+      <option value="rowPct">% of Row Total</option>
+      <option value="colPct">% of Column Total</option>
+      <option value="totalPct">% of Grand Total</option>
+    </select>
+    <label class="lbl" style="margin-top:10px;">Format</label>
+    <select id="mo-fmt-type">
+      <option value="number">Number</option>
+      <option value="percent">Percent</option>
+      <option value="indian">Indian (K / L / Cr)</option>
+    </select>
+    <div style="display:flex; gap:8px; margin-top:8px;">
+      <div style="flex:1 1 auto;"><label class="lbl">Decimals</label><input id="mo-decimals" type="number" min="0" max="6" placeholder="auto" /></div>
+      <div style="flex:1 1 auto;"><label class="lbl">Prefix</label><input id="mo-prefix" type="text" placeholder="e.g. ₹" /></div>
+      <div style="flex:1 1 auto;"><label class="lbl">Suffix</label><input id="mo-suffix" type="text" placeholder="e.g. /mo" /></div>
+    </div>
+    <label style="display:flex;gap:6px;align-items:center;font-size:14px;cursor:pointer;margin-top:12px;"><input type="checkbox" id="mo-cs-on" /> Color scale (heatmap, table view)</label>
+    <div id="mo-cs-colors" style="display:none; gap:10px; align-items:center; margin-top:6px;">
+      <label style="font-size:13px;color:var(--muted);">Low <input id="mo-cs-low" type="color" value="#eef6fb" /></label>
+      <label style="font-size:13px;color:var(--muted);">High <input id="mo-cs-high" type="color" value="#003049" /></label>
+    </div>
+    <div style="font-size:12px;color:var(--muted);margin-top:10px;">Applies to the Table view (and CSV/Copy for "Show values as"). Charts and KPI show the plain value.</div>
+  </div>
+  <div class="foot"><button id="mo-cancel">Cancel</button><button id="mo-ok" class="primary">Apply</button></div>
+</div>
+
 <!-- filter popup -->
 <div id="flt" class="pop">
   <div class="h">
@@ -495,6 +532,9 @@
 
   function $id(x){ return document.getElementById(x); }
   function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+  // ---- color-scale (heatmap) math: hex -> rgb, linear interpolate, pick readable text color ----
+  function hexToRgb(h){ h=String(h).replace("#",""); if(h.length===3) h=h[0]+h[0]+h[1]+h[1]+h[2]+h[2]; var n=parseInt(h,16)||0; return [(n>>16)&255,(n>>8)&255,n&255]; }
+  function lerpColor(c1, c2, t){ return [0,1,2].map(function(i){ return Math.round(c1[i]+(c2[i]-c1[i])*t); }); }
   function setStatus(html,isErr){ var s=$id("status"); s.className=isErr?"error":""; s.innerHTML=html; }
   // open a .pop dialog horizontally centered for its width
   function showPop($el, width, top){ $el.css({display:"block", top:(top||90)+"px", left:Math.max(8,(window.innerWidth-width)/2)+"px"}); }
@@ -648,13 +688,59 @@
     }
     return aggOne(AGG_MAP[m.agg]||"SUM", m.field, grp);
   }
+
+  // ---- "show values as" (% of row/column/grand total), table view + CSV/copy only ----
+  // ctx supplies the three possible denominators as thunks/values; callers build ctx to match
+  // whatever grouping granularity they're at (plain detail cell vs. a subtotal/collapsible node).
+  function showAsValue(m, grp, ctx){
+    if(!m.showAs || m.showAs==="value") return measureValue(m, grp);
+    var v=measureValue(m, grp); if(v===null) return null;
+    var denomGrp = m.showAs==="rowPct" ? ctx.rowTotal() : m.showAs==="colPct" ? ctx.colTotal() : ctx.grandTotal;
+    var d=measureValue(m, denomGrp);
+    if(d===null || d===0 || !isFinite(d)) return null;
+    return v/d;
+  }
+  // ctx for a DETAIL-granularity cell (plain grid + CSV/copy export). ck may be "" (no Columns field
+  // in use — every row shares the single "" column key) or null (a row's own Grand Total cell, which
+  // has no single column so % of Column falls back to % of Grand Total).
+  function detailCtx(P, rk, ck){
+    return {
+      rowTotal: function(){ return P.rowGrp[rk]||[]; },
+      colTotal: function(){ return (ck!=null && P.colGrp.hasOwnProperty(ck)) ? P.colGrp[ck] : P.filtered; },
+      grandTotal: P.filtered
+    };
+  }
   function measureLabel(m){
-    if(m.label) return m.label;  // per-visual display override (works for base, calc and ref — without detaching a ref)
-    if(m.kind==="ref"){ var sm=findSaved(m.smId); return sm? sm.label : "(removed measure)"; }
-    return (m.kind==="calc") ? "(measure)" : (m.agg+" of "+fieldLabel(m.field));
+    if(m.label) return m.label;  // per-visual display override (works for base, calc and ref — without detaching a ref); respected as-is, no auto-suffix
+    var base = (m.kind==="ref") ? (function(){ var sm=findSaved(m.smId); return sm? sm.label : "(removed measure)"; })() : ((m.kind==="calc") ? "(measure)" : (m.agg+" of "+fieldLabel(m.field)));
+    if(m.showAs==="rowPct") return base+" (% of Row)";
+    if(m.showAs==="colPct") return base+" (% of Column)";
+    if(m.showAs==="totalPct") return base+" (% of Total)";
+    return base;
   }
 
-  function fmt(v){ if(v===null||v===undefined||Number.isNaN(v)) return ""; if(!isFinite(v)) return "∞"; var n=Number(v); return Number.isInteger(n)? n.toLocaleString() : n.toLocaleString(undefined,{maximumFractionDigits:2}); }
+  // ---- number formatting: type (number/percent/indian) + decimals + prefix/suffix, per measure ----
+  function fmtIndian(n, dec){
+    var neg=n<0; n=Math.abs(n); var out;
+    if(n>=1e7) out=(n/1e7).toFixed(dec)+" Cr";
+    else if(n>=1e5) out=(n/1e5).toFixed(dec)+" L";
+    else if(n>=1e3) out=(n/1e3).toFixed(dec)+" K";
+    else out=n.toFixed(dec);
+    return (neg?"-":"")+out;
+  }
+  function fmt(v, m){
+    if(v===null||v===undefined||Number.isNaN(v)) return "";
+    if(!isFinite(v)) return "∞";
+    var n=Number(v), fs=(m&&m.fmt)||{};
+    var showPct = m && m.showAs && m.showAs!=="value";
+    var dec = (fs.decimals!==undefined && fs.decimals!==null && fs.decimals!=="") ? Math.max(0,Math.min(6,+fs.decimals)) : null;
+    var out;
+    if(showPct || fs.type==="percent") out=(n*100).toFixed(dec!=null?dec:1)+"%";
+    else if(fs.type==="indian") out=fmtIndian(n, dec!=null?dec:1);
+    else if(dec!=null) out=n.toLocaleString(undefined,{minimumFractionDigits:dec,maximumFractionDigits:dec});
+    else out = Number.isInteger(n)? n.toLocaleString() : n.toLocaleString(undefined,{maximumFractionDigits:2});
+    return (fs.prefix||"")+out+(fs.suffix||"");
+  }
 
   // Display formatting for labels: blanks -> "(blank)", ISO datetimes -> readable (no tz shift, components taken literally).
   var ISO_RE=/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}):\d{2}/;
@@ -758,9 +844,11 @@
     });
   }
   function grandRowHtml(P, ms, cKeys, hasCol, cornerCols){
+    // the grand-total row's own "row total" IS the overall grand total; not colored (excluded from the ranges pre-pass)
+    function ctx(ck){ return { rowTotal:function(){return P.filtered;}, colTotal:function(){ return (ck!=null && P.colGrp.hasOwnProperty(ck))?P.colGrp[ck]:P.filtered; }, grandTotal:P.filtered }; }
     var h='<tr class="grand"><td class="rowhdr"'+(cornerCols>1?' colspan="'+cornerCols+'"':'')+'>Grand Total</td>';
-    if(hasCol){ cKeys.forEach(function(ck){ ms.forEach(function(m){ h+='<td class="val">'+fmt(measureValue(m,P.colGrp[ck]||[]))+'</td>'; }); }); ms.forEach(function(m){ h+='<td class="val gtot">'+fmt(measureValue(m,P.filtered))+'</td>'; }); }
-    else { ms.forEach(function(m){ h+='<td class="val">'+fmt(measureValue(m,P.filtered))+'</td>'; }); }
+    if(hasCol){ cKeys.forEach(function(ck){ ms.forEach(function(m){ h+='<td class="val">'+fmt(showAsValue(m,P.colGrp[ck]||[],ctx(ck)),m)+'</td>'; }); }); ms.forEach(function(m){ h+='<td class="val gtot">'+fmt(showAsValue(m,P.filtered,ctx(null)),m)+'</td>'; }); }
+    else { ms.forEach(function(m){ h+='<td class="val">'+fmt(showAsValue(m,P.filtered,ctx("")),m)+'</td>'; }); }
     return h+'</tr>';
   }
 
@@ -814,14 +902,42 @@
     var subOn = cur().subtotals===true && rf.length>=2;
     var pcell={}, pall={};  // prefix maps for subtotals: pcell[prefix][colKey]=rows, pall[prefix]=rows
 
+    // per-measure {lo,hi} over the DETAIL grid, for any measure with colorScale on — computed once
+    // up front so every cell (detail, subtotal, or collapsible-tree node) shares the same scale.
+    var ranges={};
+    ms.forEach(function(m){
+      if(!m.colorScale || !m.colorScale.on) return;
+      var lo=Infinity, hi=-Infinity;
+      rKeys.forEach(function(rk){
+        (hasCol? cKeys : [""]).forEach(function(ck){
+          var grp = hasCol ? ((P.cell[rk]&&P.cell[rk][ck])||[]) : (P.rowGrp[rk]||[]);
+          var v=showAsValue(m, grp, detailCtx(P, rk, hasCol?ck:""));
+          if(v!==null && isFinite(v)){ if(v<lo) lo=v; if(v>hi) hi=v; }
+        });
+      });
+      if(lo<=hi) ranges[m.id]={lo:lo,hi:hi};
+    });
+    function cellBg(m, v){
+      var cs=m.colorScale; if(!cs||!cs.on||v===null||!isFinite(v)) return "";
+      var r=ranges[m.id]; if(!r||r.hi<=r.lo) return "";
+      var t=Math.max(0,Math.min(1,(v-r.lo)/(r.hi-r.lo)));
+      var rgb=lerpColor(hexToRgb(cs.low||"#eef6fb"), hexToRgb(cs.high||"#003049"), t);
+      var lum=0.299*rgb[0]+0.587*rgb[1]+0.114*rgb[2];
+      return ' style="background:rgb('+rgb.join(",")+');color:'+(lum<140?"#fff":"#1b2030")+'"';
+    }
+
     // value <td>s for a detail row (by rk) or a subtotal row (by prefix pk)
     function valCells(kind, rk, pk){
       function grp(ck){ if(kind==="detail"){ var c=P.cell[rk]; return (c&&c[ck])?c[ck]:[]; } var o=pcell[pk]; return (o&&o[ck])?o[ck]:[]; }
       function totGrp(){ return kind==="detail" ? (P.rowGrp[rk]||[]) : (pall[pk]||[]); }
+      function ctxFor(ck){ return { rowTotal:totGrp, colTotal:function(){ var key=hasCol?ck:""; return (key!=null && P.colGrp.hasOwnProperty(key))?P.colGrp[key]:P.filtered; }, grandTotal:P.filtered }; }
       var out="";
-      if(hasCol){ cKeys.forEach(function(ck){ ms.forEach(function(m){ out+='<td class="val">'+fmt(measureValue(m,grp(ck)))+'</td>'; }); });
-        if(showTot) ms.forEach(function(m){ out+='<td class="val gtot">'+fmt(measureValue(m,totGrp()))+'</td>'; });
-      } else { ms.forEach(function(m){ out+='<td class="val">'+fmt(measureValue(m,totGrp()))+'</td>'; }); }
+      if(hasCol){
+        cKeys.forEach(function(ck){ ms.forEach(function(m){ var v=showAsValue(m,grp(ck),ctxFor(ck)); out+='<td class="val"'+cellBg(m,v)+'>'+fmt(v,m)+'</td>'; }); });
+        if(showTot) ms.forEach(function(m){ var v=showAsValue(m,totGrp(),ctxFor(null)); out+='<td class="val gtot">'+fmt(v,m)+'</td>'; }); // grand-total column: no heatmap
+      } else {
+        ms.forEach(function(m){ var v=showAsValue(m,totGrp(),ctxFor("")); out+='<td class="val"'+cellBg(m,v)+'>'+fmt(v,m)+'</td>'; });
+      }
       return out;
     }
 
@@ -927,12 +1043,12 @@
       ms.forEach(function(m){
         var name=(ck!==null? (P.ckMeta[ck].map(dispLabel).join(" / ")+" · ") : "")+measureLabel(m);
         var y=rKeys.map(function(rk){ var grp; if(ck===null){ grp=P.rowGrp[rk]||[]; } else { var c=P.cell[rk]; grp=(c&&c[ck])?c[ck]:[]; } var v=measureValue(m,grp); return (v===null||!isFinite(v))?null:v; });
-        series.push({ name:name, x:x, y:y, mid:m.id });
+        series.push({ name:name, x:x, y:y, mid:m.id, m:m });
       });
     });
 
     var opt=cur().chartOpts||{}, ct=cur().chartType, traces, hasY2=false;
-    function ltext(s){ return opt.labels ? s.y.map(fmt) : undefined; }                       // data-label values
+    function ltext(s){ return opt.labels ? s.y.map(function(v){ return fmt(v, s.m); }) : undefined; } // data-label values (respects the measure's number format)
     function ltmpl(s){ return opt.labels ? ((opt.labelSeries ? (s.name+": ") : "")+"%{text}") : undefined; } // optionally prefix series name
     if(ct==="line"||ct==="area"){ traces=series.map(function(s){ return { type:"scatter", mode:"lines+markers", name:s.name, x:s.x, y:s.y, customdata:rawX, fill: ct==="area"?"tozeroy":undefined, stackgroup: ct==="area"?"one":undefined, text:ltext(s), texttemplate:ltmpl(s), textposition:"top center" }; }); }
     else if(ct==="hbar"){ traces=series.map(function(s){ return { type:"bar", orientation:"h", name:s.name, y:s.x, x:s.y, customdata:rawX, text:ltext(s), texttemplate:ltmpl(s), textposition:"auto" }; }); }
@@ -979,7 +1095,7 @@
       var real=measureValue(m, grp);
       ids.push(id); labels.push(label); parents.push(parent);
       sizes.push(isLeaf ? (additive ? Math.max(isFinite(real)?real:0, 0) : grp.length) : 0);
-      reals.push((real===null||!isFinite(real)) ? "—" : fmt(real));
+      reals.push((real===null||!isFinite(real)) ? "—" : fmt(real, m));
     }
     if(rf.length===0){ pushNode("all","(all)","",P.filtered,true); }
     else {
@@ -1001,10 +1117,10 @@
     if(!ms.length){ el.innerHTML='<div class="empty-note">Add a measure for a KPI.</div>'; return; }
     var color=(cur().chartOpts&&cur().chartOpts.kpiColor)||"#003049";
     var main=ms[0], mv=measureValue(main, P.filtered);
-    var html='<div class="kpi"><div class="kpi-val" style="color:'+esc(color)+'">'+(mv===null?"—":fmt(mv))+'</div><div class="kpi-lbl">'+esc(measureLabel(main))+'</div>';
+    var html='<div class="kpi"><div class="kpi-val" style="color:'+esc(color)+'">'+(mv===null?"—":fmt(mv,main))+'</div><div class="kpi-lbl">'+esc(measureLabel(main))+'</div>';
     if(ms.length>1){
       html+='<div class="kpi-sub">';
-      for(var i=1;i<ms.length;i++){ var v=measureValue(ms[i],P.filtered); html+='<span class="kpi-sub-item"><b>'+(v===null?"—":fmt(v))+'</b> '+esc(measureLabel(ms[i]))+'</span>'; }
+      for(var i=1;i<ms.length;i++){ var v=measureValue(ms[i],P.filtered); html+='<span class="kpi-sub-item"><b>'+(v===null?"—":fmt(v,ms[i]))+'</b> '+esc(measureLabel(ms[i]))+'</span>'; }
       html+='</div>';
     }
     el.innerHTML=html+'</div>';
@@ -1073,7 +1189,7 @@
 
   function chipHtml(bucket, item){
     if(bucket==="values"){
-      var tools='<span class="ic" data-act="edit" title="'+(item.kind==="base"?"Rename":"Edit")+'">✎</span><span class="ic" data-act="dup" title="Duplicate">⧉</span><span class="x" data-act="remove" title="Remove">✕</span>';
+      var tools='<span class="ic" data-act="edit" title="'+(item.kind==="base"?"Rename":"Edit")+'">✎</span><span class="ic" data-act="opts" title="Format, show values as, color scale">⚙</span><span class="ic" data-act="dup" title="Duplicate">⧉</span><span class="x" data-act="remove" title="Remove">✕</span>';
       if(item.kind==="ref"){
         return '<li class="chip calc" data-id="'+item.id+'"><span class="badge" title="Linked to a saved measure (live)">🔗</span><span class="cname" title="'+esc(measureLabel(item))+'">'+esc(measureLabel(item))+'</span>'+tools+'</li>';
       }
@@ -1203,6 +1319,35 @@
     var copy=$.extend({}, m); delete copy._fn; copy.id="m"+(uid++);
     var idx=state.values.indexOf(m); state.values.splice(idx+1,0,copy);
     renderBuckets(); rerender();
+  });
+
+  // ---- measure options: format / show-as / color scale ----
+  var $mo=$("#measopts"), moEditId=null;
+  $(document).on("click", "#b-values .ic[data-act=opts]", function(){
+    var m=findMeasure($(this).closest(".chip").data("id")); if(!m) return;
+    moEditId=m.id;
+    var fs=m.fmt||{}, cs=m.colorScale||{};
+    $id("mo-showas").value = m.showAs||"value";
+    $id("mo-fmt-type").value = fs.type||"number";
+    $id("mo-decimals").value = (fs.decimals!==undefined && fs.decimals!==null) ? fs.decimals : "";
+    $id("mo-prefix").value = fs.prefix||"";
+    $id("mo-suffix").value = fs.suffix||"";
+    $id("mo-cs-on").checked = !!cs.on;
+    $id("mo-cs-low").value = cs.low||"#eef6fb";
+    $id("mo-cs-high").value = cs.high||"#003049";
+    $id("mo-cs-colors").style.display = cs.on ? "flex" : "none";
+    showPop($mo, 340);
+  });
+  $id("mo-cs-on").addEventListener("change", function(){ $id("mo-cs-colors").style.display=this.checked?"flex":"none"; });
+  $id("mo-cancel").addEventListener("click", function(){ $mo.hide(); moEditId=null; });
+  $id("mo-ok").addEventListener("click", function(){
+    var m=findMeasure(moEditId); if(!m) return $mo.hide();
+    var showAs=$id("mo-showas").value; if(showAs==="value") delete m.showAs; else m.showAs=showAs;
+    var fType=$id("mo-fmt-type").value, dec=$id("mo-decimals").value.trim(), pre=$id("mo-prefix").value, suf=$id("mo-suffix").value;
+    var fmtSpec={}; if(fType!=="number") fmtSpec.type=fType; if(dec!=="") fmtSpec.decimals=Math.max(0,Math.min(6,+dec)); if(pre) fmtSpec.prefix=pre; if(suf) fmtSpec.suffix=suf;
+    if(Object.keys(fmtSpec).length) m.fmt=fmtSpec; else delete m.fmt;
+    if($id("mo-cs-on").checked) m.colorScale={on:true, low:$id("mo-cs-low").value, high:$id("mo-cs-high").value}; else delete m.colorScale;
+    moEditId=null; $mo.hide(); renderBuckets(); rerender();
   });
   // double-click a measure's name to rename it for THIS visual only (display override; keeps 🔗 links intact)
   $(document).on("dblclick", "#b-values .chip .cname", function(){
@@ -1457,6 +1602,7 @@
     else if(vis("xfilter")){ dlg="xfilter"; ok="xf-ok"; cancel="xf-cancel"; }
     else if(vis("impdlg")){ if(e.key==="Escape"){ e.preventDefault(); $id("imp-cancel").click(); } return; }
     else if(vis("expdlg")){ dlg="expdlg"; ok="exp-ok"; cancel="exp-cancel"; }
+    else if(vis("measopts")){ dlg="measopts"; ok="mo-ok"; cancel="mo-cancel"; }
     else if(vis("flt")){
       if(e.key==="Escape"){ e.preventDefault(); $("#flt .cancel").click(); }
       else if(e.key==="Enter" && !inTextarea){ e.preventDefault(); $("#flt .apply").click(); }
@@ -1484,9 +1630,23 @@
     $("#charttype").toggle(state.view==="chart");
     $id("chartopts").style.display = state.view==="chart" ? "flex" : "none";
     $id("kpiopts").style.display = state.view==="kpi" ? "flex" : "none";
+    $id("pngbtn").style.display = state.view==="chart" ? "" : "none";
     if(state.view==="kpi") renderKpiSwatches();
+    if(state.view==="chart") syncChartSort();
     renderComboCfg();
   }
+  // The chart's own sort control just reuses state.sort (the same field the table's clickable column
+  // headers set) — sorting by "value" always targets the first measure; direction is whatever's active.
+  function syncChartSort(){
+    var s=state.sort||{key:"__row__",dir:1};
+    $id("chart-sort").value = (s.key==="__row__") ? "row" : (s.dir<0 ? "desc" : "asc");
+  }
+  $("#chart-sort").on("change", function(){
+    var v=this.value;
+    if(v==="row") state.sort={key:"__row__",dir:1};
+    else state.sort={key:(state.values[0]&&state.values[0].id)||"__row__", dir: v==="asc"?1:-1};
+    rerender();
+  });
   function renderKpiSwatches(){
     var cur0=(state.chartOpts&&state.chartOpts.kpiColor)||"#003049";
     var html=PALETTE.map(function(c){ return '<span class="kpi-sw'+(c.toLowerCase()===cur0.toLowerCase()?" on":"")+'" data-c="'+c+'" style="background:'+c+'" title="'+c+'"></span>'; }).join("");
@@ -1517,6 +1677,13 @@
   });
   $("#csvbtn").on("click", exportCSV);
   $("#copybtn").on("click", copyTable);
+  $("#pngbtn").on("click", function(){ downloadChartPng($("#result .chartbox")[0], state.dashName||"chart"); });
+  // shared by the builder's PNG button and each dashboard chart tile's own download icon
+  function downloadChartPng(cd, filename){
+    if(!cd || !window.Plotly){ setStatus("No chart to export.", true); return; }
+    Plotly.downloadImage(cd, { format:"png", filename:String(filename).replace(/[^\w.\-]+/g,"_"), width:cd.clientWidth||900, height:cd.clientHeight||500 })
+      .catch(function(e){ setStatus("PNG export failed: "+(e&&e.message||e), true); });
+  }
 
   // click a measure/row header to sort
   $(document).on("click", "table.pivot th[data-sort]", function(){
@@ -1536,15 +1703,20 @@
     (hasCol?P.cKeys:[null]).forEach(function(ck){ ms.forEach(function(m){ head.push((ck!==null? P.ckMeta[ck].map(dispLabel).join(" / ")+" - ":"")+measureLabel(m)); }); });
     if(hasCol && showTot) ms.forEach(function(m){ head.push("Grand Total - "+measureLabel(m)); });
     var lines=[head];
+    // "Show values as" changes the NUMBER (e.g. a ratio instead of a sum), so it must propagate here for
+    // correctness — but per-measure display formatting (currency/indian-units/decimals) stays table-only,
+    // so CSV/Copy keep plain numbers a spreadsheet can do further math on.
     P.rKeys.forEach(function(rk){
       var line=[]; if(P.rf.length===0) line.push("Total"); else P.rkMeta[rk].forEach(function(v){ line.push(dispLabel(v)); });
-      if(hasCol){ P.cKeys.forEach(function(ck){ ms.forEach(function(m){ var c=P.cell[rk]; line.push(numCSV(measureValue(m,(c&&c[ck])?c[ck]:[]))); }); }); if(showTot) ms.forEach(function(m){ line.push(numCSV(measureValue(m,P.rowGrp[rk]||[]))); }); }
-      else ms.forEach(function(m){ line.push(numCSV(measureValue(m,P.rowGrp[rk]||[]))); });
+      if(hasCol){ P.cKeys.forEach(function(ck){ ms.forEach(function(m){ var c=P.cell[rk]; line.push(numCSV(showAsValue(m,(c&&c[ck])?c[ck]:[],detailCtx(P,rk,ck)))); }); }); if(showTot) ms.forEach(function(m){ line.push(numCSV(showAsValue(m,P.rowGrp[rk]||[],detailCtx(P,rk,null)))); }); }
+      else ms.forEach(function(m){ line.push(numCSV(showAsValue(m,P.rowGrp[rk]||[],detailCtx(P,rk,"")))); });
       lines.push(line);
     });
     if(showTot){ var gl=["Grand Total"]; for(var k=1;k<P.rf.length;k++) gl.push("");
-      if(hasCol){ P.cKeys.forEach(function(ck){ ms.forEach(function(m){ gl.push(numCSV(measureValue(m,P.colGrp[ck]||[]))); }); }); ms.forEach(function(m){ gl.push(numCSV(measureValue(m,P.filtered))); }); }
-      else ms.forEach(function(m){ gl.push(numCSV(measureValue(m,P.filtered))); });
+      // the grand-total row's own row-total IS the overall grand total (same convention as grandRowHtml)
+      var grandRowCtx = function(ck){ return { rowTotal:function(){return P.filtered;}, colTotal:function(){ return (ck!=null && P.colGrp.hasOwnProperty(ck))?P.colGrp[ck]:P.filtered; }, grandTotal:P.filtered }; };
+      if(hasCol){ P.cKeys.forEach(function(ck){ ms.forEach(function(m){ gl.push(numCSV(showAsValue(m,P.colGrp[ck]||[],grandRowCtx(ck)))); }); }); ms.forEach(function(m){ gl.push(numCSV(showAsValue(m,P.filtered,grandRowCtx(null)))); }); }
+      else ms.forEach(function(m){ gl.push(numCSV(showAsValue(m,P.filtered,grandRowCtx("")))); });
       lines.push(gl);
     }
     return lines;
@@ -1651,21 +1823,34 @@
   // ---- tabs ----
   function renderTabs(){
     var d=state.dash, html="";
-    d.tabs.forEach(function(t){ html+='<div class="dtab'+(t.id===d.activeTabId?" on":"")+'" data-id="'+t.id+'" title="Double-click to rename"><span class="nm">'+esc(t.name)+'</span>'+(d.tabs.length>1?'<span class="x" data-act="deltab" title="Delete tab">✕</span>':'')+'</div>'; });
+    d.tabs.forEach(function(t){ html+='<div class="dtab'+(t.id===d.activeTabId?" on":"")+'" data-id="'+t.id+'" title="Double-click to rename"><span class="nm">'+esc(t.name)+'</span><span class="x" data-act="duptab" title="Duplicate tab">⧉</span>'+(d.tabs.length>1?'<span class="x" data-act="deltab" title="Delete tab">✕</span>':'')+'</div>'; });
     html+='<button id="addtab" class="addtab" title="Add a tab">＋ Tab</button>';
     $id("dtabs").innerHTML=html;
   }
-  $(document).on("click", "#dtabs .dtab", function(e){ var id=$(this).data("id"); if($(e.target).data("act")==="deltab"){ deleteTab(id); return; } if(id!==state.dash.activeTabId){ state.dash.activeTabId=id; saveState(); renderDashboard(); } });
+  $(document).on("click", "#dtabs .dtab", function(e){ var id=$(this).data("id"), act=$(e.target).data("act"); if(act==="deltab"){ deleteTab(id); return; } if(act==="duptab"){ duplicateTab(id); return; } if(id!==state.dash.activeTabId){ state.dash.activeTabId=id; saveState(); renderDashboard(); } });
   $(document).on("dblclick", "#dtabs .dtab .nm", function(){ var id=$(this).closest(".dtab").data("id"), t=findTab(id); if(!t) return; var nm=window.prompt("Rename tab:", t.name); if(nm!==null){ t.name=nm.trim()||t.name; saveState(); renderTabs(); } });
   $(document).on("click", "#addtab", function(){ var nm=window.prompt("New tab name:", "Tab "+(state.dash.tabs.length+1)); if(nm===null) return; var t=freshTab(nm.trim()); state.dash.tabs.push(t); state.dash.activeTabId=t.id; saveState(); renderDashboard(); });
   function deleteTab(id){ var d=state.dash; if(d.tabs.length<=1) return; var t=findTab(id); if(t && t.tiles.length && !window.confirm('Delete tab "'+t.name+'" and its '+t.tiles.length+' tile(s)?')) return; d.tabs=d.tabs.filter(function(x){return x.id!==id;}); if(d.activeTabId===id) d.activeTabId=d.tabs[0].id; saveState(); renderDashboard(); }
+  // duplicate a tab: deep-copy its tiles with fresh ids, insert right after the original
+  function duplicateTab(id){
+    var d=state.dash, idx=-1, t=null;
+    for(var i=0;i<d.tabs.length;i++){ if(d.tabs[i].id===id){ idx=i; t=d.tabs[i]; break; } }
+    if(!t) return;
+    var copy=JSON.parse(JSON.stringify(t));
+    tabuid++; copy.id="tab"+tabuid; copy.name=t.name+" copy";
+    copy.tiles.forEach(function(tile){ tile.id="t"+(tuid++); });
+    d.tabs.splice(idx+1, 0, copy);
+    d.activeTabId=copy.id;
+    saveState(); renderDashboard();
+  }
 
   function tileMarkup(tile){
     var tools;
     if(tile.kind==="slicer") tools='<span class="ic" data-act="cfg" title="Configure slicer">⚙</span><span class="ic" data-act="del" title="Remove">✕</span>';
     else {
       var xf = (tile.kind==="chart") ? '<span class="ic'+((tile.xfilter&&tile.xfilter.on)?" on":"")+'" data-act="xf" title="Click this chart to filter other tiles">⌖</span>' : '';
-      tools = xf+'<span class="ic" data-act="edit" title="Edit in Builder">✎</span><span class="ic" data-act="dup" title="Duplicate">⧉</span><span class="ic" data-act="del" title="Remove">✕</span>';
+      var png = (tile.kind==="chart") ? '<span class="ic" data-act="png" title="Download as PNG">⬇</span>' : '';
+      tools = xf+png+'<span class="ic" data-act="edit" title="Edit in Builder">✎</span><span class="ic" data-act="dup" title="Duplicate">⧉</span><span class="ic" data-act="del" title="Remove">✕</span>';
     }
     var cls="grid-stack-item-content"+(tile.kind==="slicer"?" slicer-tile":"")+((tile.xfilter&&tile.xfilter.on)?" xf-on":"");
     return '<div class="'+cls+'"><div class="tile-head"><span class="tt" title="'+esc(tile.title)+'">'+esc(tile.title)+'</span>'+tools+'</div><div class="tile-body"></div></div>';
@@ -1797,6 +1982,7 @@
     else if(act==="edit"){ loadCfgIntoBuilder(tile.cfg); setEditingTile(tile.id); setMode("builder"); }
     else if(act==="cfg"){ openSlicerDialog(tile); }
     else if(act==="xf"){ openXfilterDialog(tile); }
+    else if(act==="png"){ downloadChartPng(el.querySelector(".chartbox"), tile.title); }
   });
 
   // ---- cross-filter (chart-as-filter) dialog ----
